@@ -5,7 +5,7 @@ export type TimeOfDay = 'day' | 'night'
 export type Weather = 'sunny' | 'rainy'
 export type DinoState = 'walking' | 'sleeping' | 'happy'
 export type VisitorType = 'boy' | 'girl' | 'office'
-export type FacilityType = 'feeder'
+export type FacilityType = 'feeder' | 'shop' | 'toilet'
 export type GameSpeed = 1 | 2 | 3
 
 export interface SpeciesDef {
@@ -33,6 +33,7 @@ export interface DinosaurSaveData {
 
 export interface GameSaveState {
   money: number
+  reputation: number
   day: number
   timeOfDay: TimeOfDay
   weather: Weather

@@ -93,6 +93,11 @@
   color: #8a5a00;
 }
 
+.ui-stat-reputation {
+  color: #7b4d12;
+  background: #fff8e1;
+}
+
 .ui-toolbar {
   display: flex;
   align-items: center;
@@ -268,6 +273,16 @@
   cursor: pointer;
   box-shadow: 0 3px 0 #e3c393;
   transition: transform 0.08s, box-shadow 0.08s;
+}
+
+.build-menu-list {
+  display: grid;
+  gap: 9px;
+}
+
+.build-menu-item-name {
+  min-width: 0;
+  text-align: left;
 }
 
 .build-menu-item:active:not(:disabled) {

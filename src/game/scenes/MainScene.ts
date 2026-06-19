@@ -21,24 +21,37 @@ import {
   VISITOR_BASE_INTERVAL_MS,
   NIGHT_INTERVAL_MULTIPLIER,
   RAIN_INTERVAL_MULTIPLIER,
+  REPUTATION_VISITOR_CAP,
+  VISITOR_MAX_CONCURRENT,
   AUTOSAVE_INTERVAL_MS,
 } from '../constants'
 import { SaveManager } from '../SaveManager'
 import { eventBus } from '../EventBus'
 import { soundManager } from '../SoundManager'
-import type { FacilityData, GameSaveState, GameSpeed, VisitorType } from '../types'
+import type { FacilityData, FacilityType, GameSaveState, GameSpeed, VisitorType } from '../types'
 import { Dinosaur } from '../entities/Dinosaur'
 import { Visitor } from '../entities/Visitor'
 
 const ENTRY_Y = PEN_Y + PEN_HEIGHT + 50
+const AMENITY_GRID_SLOTS = [
+  { gridX: 0, gridY: 10 }, { gridX: 1, gridY: 10 },
+  { gridX: 2, gridY: 10 }, { gridX: 3, gridY: 10 },
+  { gridX: 4, gridY: 10 }, { gridX: 5, gridY: 10 },
+  { gridX: 6, gridY: 10 }, { gridX: 7, gridY: 10 },
+] as const
+
+interface FacilitySpriteRecord {
+  data: FacilityData
+  sprite: Phaser.GameObjects.Sprite
+}
 
 export class MainScene extends Phaser.Scene {
   private saveState!: GameSaveState
   private dino!: Dinosaur
   private visitors: Visitor[] = []
-  private feederSprites: { id: string; gridX: number; gridY: number; sprite: Phaser.GameObjects.Sprite }[] = []
+  private facilitySprites: FacilitySpriteRecord[] = []
 
-  private buildMode = false
+  private buildType: FacilityType | null = null
   private buildHighlight!: Phaser.GameObjects.Graphics
 
   private nightOverlay!: Phaser.GameObjects.Rectangle
@@ -145,6 +158,35 @@ export class MainScene extends Phaser.Scene {
     g.generateTexture('tex_feeder', 32, 19)
     g.clear()
 
+    // Leaf-cookie kiosk with a striped awning and leaf sign.
+    g.fillStyle(0x6d4c41, 1)
+    g.fillRoundedRect(3, 9, 34, 27, 3)
+    g.fillStyle(0xfff3cd, 1)
+    g.fillRect(7, 17, 26, 15)
+    g.fillStyle(0xef5350, 1)
+    g.fillRect(3, 8, 34, 8)
+    g.fillStyle(0xffffff, 1)
+    g.fillRect(9, 8, 6, 8)
+    g.fillRect(25, 8, 6, 8)
+    g.fillStyle(0x4caf50, 1)
+    g.fillEllipse(20, 5, 12, 7)
+    g.fillStyle(0x5d4037, 1)
+    g.fillRect(19, 4, 2, 7)
+    g.generateTexture('tex_shop', 40, 38)
+    g.clear()
+
+    // Compact park toilet with a clear door marker.
+    g.fillStyle(0xe8f5e9, 1)
+    g.fillRoundedRect(5, 5, 30, 33, 4)
+    g.lineStyle(2, 0x388e3c, 1)
+    g.strokeRoundedRect(5, 5, 30, 33, 4)
+    g.fillStyle(0x66bb6a, 1)
+    g.fillRoundedRect(11, 14, 18, 24, 2)
+    g.fillStyle(0xffffff, 1)
+    g.fillCircle(20, 10, 3)
+    g.generateTexture('tex_toilet', 40, 40)
+    g.clear()
+
     // raindrop
     g.fillStyle(0x90caf9, 0.8)
     g.fillRect(0, 0, 2, 10)
@@ -167,7 +209,7 @@ export class MainScene extends Phaser.Scene {
 
     this.cameras.main.setBackgroundColor(0x8bc34a)
     this.drawStaticScenery()
-    this.createFeedersFromState()
+    this.createFacilitiesFromState()
     this.createDino()
     this.createOverlays()
 
@@ -322,31 +364,45 @@ export class MainScene extends Phaser.Scene {
     this.dino.setDepth(5)
   }
 
-  private createFeedersFromState() {
-    this.feederSprites.forEach((f) => f.sprite.destroy())
-    this.feederSprites = []
+  private createFacilitiesFromState() {
+    this.facilitySprites.forEach((facility) => facility.sprite.destroy())
+    this.facilitySprites = []
     for (const facility of this.saveState.facilities) {
-      this.addFeederSprite(facility)
+      this.addFacilitySprite(facility)
     }
   }
 
-  private addFeederSprite(facility: FacilityData): Phaser.GameObjects.Sprite {
-    const worldX = PEN_X + facility.gridX * TILE_SIZE + TILE_SIZE / 2
-    const worldY = PEN_Y + facility.gridY * TILE_SIZE + TILE_SIZE / 2
-    const sprite = this.add.sprite(worldX, worldY, 'tex_feeder').setDepth(4)
-    this.feederSprites.push({ id: facility.id, gridX: facility.gridX, gridY: facility.gridY, sprite })
+  private facilityWorldPosition(facility: FacilityData): Phaser.Math.Vector2 {
+    if (facility.type === 'feeder') {
+      return new Phaser.Math.Vector2(
+        PEN_X + facility.gridX * TILE_SIZE + TILE_SIZE / 2,
+        PEN_Y + facility.gridY * TILE_SIZE + TILE_SIZE / 2,
+      )
+    }
+    return new Phaser.Math.Vector2(
+      facility.gridX * TILE_SIZE + TILE_SIZE / 2,
+      facility.gridY * TILE_SIZE + TILE_SIZE / 2,
+    )
+  }
+
+  private addFacilitySprite(facility: FacilityData): Phaser.GameObjects.Sprite {
+    const position = this.facilityWorldPosition(facility)
+    const sprite = this.add.sprite(position.x, position.y, `tex_${facility.type}`).setDepth(4)
+    this.facilitySprites.push({ data: facility, sprite })
     return sprite
   }
 
   private feederWorldPositions(): Phaser.Math.Vector2[] {
-    return this.feederSprites.map((f) => new Phaser.Math.Vector2(f.sprite.x, f.sprite.y))
+    return this.facilitySprites
+      .filter((facility) => facility.data.type === 'feeder')
+      .map((facility) => new Phaser.Math.Vector2(facility.sprite.x, facility.sprite.y))
   }
 
   // ---------- build mode ----------
 
-  private handleSetBuildMode(active: boolean) {
-    this.buildMode = active
-    if (active) {
+  private handleSetBuildMode(type: FacilityType | null) {
+    this.buildType = type
+    if (type) {
       eventBus.emit('info', '設置する場所をタップしてください')
     }
     this.drawBuildHighlight()
@@ -354,56 +410,78 @@ export class MainScene extends Phaser.Scene {
 
   private drawBuildHighlight() {
     this.buildHighlight.clear()
-    if (!this.buildMode) return
-    for (let gx = 0; gx < PEN_COLS; gx++) {
-      for (let gy = 0; gy < PEN_ROWS; gy++) {
-        const occupied = this.saveState.facilities.some((f) => f.gridX === gx && f.gridY === gy)
-        const x = PEN_X + gx * TILE_SIZE
-        const y = PEN_Y + gy * TILE_SIZE
-        this.buildHighlight.fillStyle(occupied ? 0xef5350 : 0xffee58, 0.35)
-        this.buildHighlight.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4)
+    if (!this.buildType) return
+    if (this.buildType === 'feeder') {
+      for (let gx = 0; gx < PEN_COLS; gx++) {
+        for (let gy = 0; gy < PEN_ROWS; gy++) {
+          const occupied = this.saveState.facilities.some(
+            (facility) => facility.type === 'feeder' && facility.gridX === gx && facility.gridY === gy,
+          )
+          const x = PEN_X + gx * TILE_SIZE
+          const y = PEN_Y + gy * TILE_SIZE
+          this.buildHighlight.fillStyle(occupied ? 0xef5350 : 0xffee58, 0.35)
+          this.buildHighlight.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4)
+        }
       }
+      return
+    }
+
+    for (const slot of AMENITY_GRID_SLOTS) {
+      const occupied = this.saveState.facilities.some(
+        (facility) => facility.type !== 'feeder' && facility.gridX === slot.gridX && facility.gridY === slot.gridY,
+      )
+      const x = slot.gridX * TILE_SIZE
+      const y = slot.gridY * TILE_SIZE
+      this.buildHighlight.fillStyle(occupied ? 0xef5350 : 0xffee58, 0.35)
+      this.buildHighlight.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4)
     }
   }
 
   private handlePointerDown(pointer: Phaser.Input.Pointer) {
     soundManager.unlock()
-    if (!this.buildMode) return
+    if (!this.buildType) return
 
-    const relX = pointer.worldX - PEN_X
-    const relY = pointer.worldY - PEN_Y
-    const gridX = Math.floor(relX / TILE_SIZE)
-    const gridY = Math.floor(relY / TILE_SIZE)
-
-    const inBounds = gridX >= 0 && gridX < PEN_COLS && gridY >= 0 && gridY < PEN_ROWS
+    const isFeeder = this.buildType === 'feeder'
+    const gridX = Math.floor((pointer.worldX - (isFeeder ? PEN_X : 0)) / TILE_SIZE)
+    const gridY = Math.floor((pointer.worldY - (isFeeder ? PEN_Y : 0)) / TILE_SIZE)
+    const inBounds = isFeeder
+      ? gridX >= 0 && gridX < PEN_COLS && gridY >= 0 && gridY < PEN_ROWS
+      : AMENITY_GRID_SLOTS.some((slot) => slot.gridX === gridX && slot.gridY === gridY)
     if (!inBounds) {
-      eventBus.emit('build-result', { success: false, message: '柵の中をタップしてください' })
+      const message = isFeeder ? '柵の中をタップしてください' : '黄色い柵外グリッドをタップしてください'
+      eventBus.emit('build-result', { success: false, message })
       return
     }
 
-    const occupied = this.saveState.facilities.some((f) => f.gridX === gridX && f.gridY === gridY)
+    const occupied = this.saveState.facilities.some((facility) =>
+      isFeeder
+        ? facility.type === 'feeder' && facility.gridX === gridX && facility.gridY === gridY
+        : facility.type !== 'feeder' && facility.gridX === gridX && facility.gridY === gridY,
+    )
     if (occupied) {
       eventBus.emit('build-result', { success: false, message: 'すでに何か置かれています' })
       return
     }
 
-    const cost = FACILITIES.feeder.cost
+    const facilityDef = FACILITIES[this.buildType]
+    const cost = facilityDef.cost
     if (this.saveState.money < cost) {
       eventBus.emit('build-result', { success: false, message: '資金が足りません' })
       return
     }
 
     this.saveState.money -= cost
-    const facility: FacilityData = { id: `feeder-${Date.now()}`, type: 'feeder', gridX, gridY }
+    const type = this.buildType
+    const facility: FacilityData = { id: `${type}-${Date.now()}`, type, gridX, gridY }
     this.saveState.facilities.push(facility)
-    const sprite = this.addFeederSprite(facility)
+    const sprite = this.addFacilitySprite(facility)
     this.playBuildFeedback(sprite)
 
-    this.buildMode = false
+    this.buildType = null
     this.drawBuildHighlight()
     this.emitState()
     this.persist()
-    eventBus.emit('build-result', { success: true, message: '木の餌場を設置しました' })
+    eventBus.emit('build-result', { success: true, message: `${facilityDef.displayName}を設置しました` })
   }
 
   /** "ぽふん": a quick scale-punch plus a soft puff ring and a scatter of dust specks. */
@@ -444,16 +522,42 @@ export class MainScene extends Phaser.Scene {
   // ---------- visitors ----------
 
   private computeNextVisitorInterval(): number {
-    let [min, max] = VISITOR_BASE_INTERVAL_MS
+    const [min, max] = VISITOR_BASE_INTERVAL_MS
     let multiplier = 1
     if (this.saveState.timeOfDay === 'night') multiplier *= NIGHT_INTERVAL_MULTIPLIER
     if (this.saveState.weather === 'rainy') multiplier *= RAIN_INTERVAL_MULTIPLIER
+    const reputationRatio = Math.min(this.saveState.reputation, REPUTATION_VISITOR_CAP) / REPUTATION_VISITOR_CAP
+    multiplier *= 1 - reputationRatio * 0.4
     return Phaser.Math.Between(min, max) * multiplier
   }
 
+  private pickVisitorType(): VisitorType {
+    const officeWeight = this.saveState.timeOfDay === 'night' || this.saveState.weather === 'rainy' ? 0.25 : 1
+    const roll = Math.random() * (2 + officeWeight)
+    if (roll < 1) return 'boy'
+    if (roll < 2) return 'girl'
+    return 'office'
+  }
+
+  private randomFacilityPosition(type: FacilityType): Phaser.Math.Vector2 | null {
+    const matches = this.facilitySprites.filter((facility) => facility.data.type === type)
+    if (matches.length === 0) return null
+    const chosen = Phaser.Utils.Array.GetRandom(matches)
+    return new Phaser.Math.Vector2(chosen.sprite.x, chosen.sprite.y + 20)
+  }
+
+  private addReputation(amount: number, x?: number, y?: number) {
+    if (amount <= 0) return
+    this.saveState.reputation += amount
+    if (x !== undefined && y !== undefined) this.showReputationPopup(x, y, amount)
+    this.emitState()
+    this.persist()
+    eventBus.emit('info', '保護区の評判が少し上がりました')
+  }
+
   private spawnVisitor() {
-    const types: VisitorType[] = ['boy', 'girl', 'office']
-    const type = types[Phaser.Math.Between(0, types.length - 1)]
+    if (this.visitors.length >= VISITOR_MAX_CONCURRENT) return
+    const type = this.pickVisitorType()
     const fromLeft = Math.random() < 0.5
     const exitLeft = Math.random() < 0.5
 
@@ -464,20 +568,47 @@ export class MainScene extends Phaser.Scene {
     )
     const exit = new Phaser.Math.Vector2(exitLeft ? -20 : GAME_WIDTH + 20, ENTRY_Y)
 
-    const visitor = new Visitor(this, spawn, viewpoint, exit, type, {
-      onMoneyEarned: (amount, x, y) => {
-        this.saveState.money += amount
-        soundManager.playCoin()
-        this.showMoneyPopup(x, y, amount)
-        this.emitState()
-        this.persist()
+    const toiletPosition = this.randomFacilityPosition('toilet')
+    const visitor = new Visitor(
+      this,
+      spawn,
+      viewpoint,
+      exit,
+      type,
+      {
+        feederNearby: this.facilitySprites.some((facility) => facility.data.type === 'feeder'),
+        crowdPenalty: this.visitors.length >= 3 && !toiletPosition ? 5 : 0,
+        shopPosition: this.randomFacilityPosition('shop'),
+        toiletPosition,
+        weather: this.saveState.weather,
       },
-      onInfo: (message) => eventBus.emit('info', message),
-      onDespawn: (v) => {
-        this.visitors = this.visitors.filter((existing) => existing !== v)
-        v.destroy()
+      {
+        onMoneyEarned: (amount, x, y) => {
+          this.saveState.money += amount
+          soundManager.playCoin()
+          this.showMoneyPopup(x, y, amount)
+          this.emitState()
+          this.persist()
+        },
+        onPurchase: (amount, x, y) => {
+          this.saveState.money += amount
+          soundManager.playCoin()
+          this.showMoneyPopup(x, y, amount)
+          this.addReputation(1, x, y)
+          eventBus.emit('info', '来園者が葉っぱクッキーを買いました')
+        },
+        onInfo: (message) => eventBus.emit('info', message),
+        onExit: (v) => {
+          if (v.satisfaction >= 25) {
+            const baseGain = v.satisfaction >= 40 ? 3 : v.satisfaction >= 32 ? 2 : 1
+            const rainBonus = v.weather === 'rainy' ? 1 : 0
+            this.addReputation(baseGain + rainBonus, v.x, v.y)
+          }
+          this.visitors = this.visitors.filter((existing) => existing !== v)
+          v.destroy()
+        },
       },
-    })
+    )
     visitor.setDepth(6)
     this.visitors.push(visitor)
   }
@@ -504,6 +635,27 @@ export class MainScene extends Phaser.Scene {
       duration: 900,
       delay: 500,
       ease: 'Cubic.easeOut',
+      onComplete: () => popup.destroy(),
+    })
+  }
+
+  private showReputationPopup(x: number, y: number, amount: number) {
+    const popup = this.add
+      .text(x, y - 42, `評判 +${amount}`, {
+        fontSize: '12px',
+        color: '#7b1fa2',
+        fontStyle: 'bold',
+        backgroundColor: '#ffffffdd',
+        padding: { x: 6, y: 3 },
+      })
+      .setOrigin(0.5)
+      .setDepth(22)
+    this.tweens.add({
+      targets: popup,
+      y: popup.y - 20,
+      alpha: 0,
+      duration: 900,
+      delay: 450,
       onComplete: () => popup.destroy(),
     })
   }
@@ -563,8 +715,9 @@ export class MainScene extends Phaser.Scene {
 
   private nearestFeederDistanceFromDino(): number {
     let min = Infinity
-    for (const f of this.feederSprites) {
-      const d = Phaser.Math.Distance.Between(this.dino.x, this.dino.y, f.sprite.x, f.sprite.y)
+    for (const facility of this.facilitySprites) {
+      if (facility.data.type !== 'feeder') continue
+      const d = Phaser.Math.Distance.Between(this.dino.x, this.dino.y, facility.sprite.x, facility.sprite.y)
       if (d < min) min = d
     }
     return min
@@ -589,6 +742,7 @@ export class MainScene extends Phaser.Scene {
     const pool = ['モコがぽてぽて歩いています', '小さな保護区に平和な時間が流れています']
     if (this.nearestFeederDistanceFromDino() < 60) pool.push('モコが餌場に近づいています')
     if (this.visitors.length > 0) pool.push('来園者が少しずつ増えてきました')
+    if (this.saveState.reputation >= 5) pool.push('小さな保護区が少しずつ賑わってきました')
     if (isRain) pool.push('雨の匂いがします', '雨が草木を潤しています')
 
     eventBus.emit('info', Phaser.Utils.Array.GetRandom(pool))
@@ -597,6 +751,7 @@ export class MainScene extends Phaser.Scene {
   private emitState() {
     eventBus.emit('state-update', {
       money: this.saveState.money,
+      reputation: this.saveState.reputation,
       day: this.saveState.day,
       timeOfDay: this.saveState.timeOfDay,
       weather: this.saveState.weather,
@@ -642,14 +797,14 @@ export class MainScene extends Phaser.Scene {
     this.visitors.forEach((v) => v.destroy())
     this.visitors = []
 
-    this.feederSprites.forEach((f) => f.sprite.destroy())
-    this.feederSprites = []
-    this.createFeedersFromState()
+    this.facilitySprites.forEach((facility) => facility.sprite.destroy())
+    this.facilitySprites = []
+    this.createFacilitiesFromState()
 
     this.dino.destroy()
     this.createDino()
 
-    this.buildMode = false
+    this.buildType = null
     this.drawBuildHighlight()
 
     this.dayPhaseTimer = 0

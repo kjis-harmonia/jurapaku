@@ -9,6 +9,7 @@ export const eventBus = new EventBus()
 
 export interface UiStatePayload {
   money: number
+  reputation: number
   day: number
   timeOfDay: 'day' | 'night'
   weather: 'sunny' | 'rainy'

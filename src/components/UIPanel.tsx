@@ -1,8 +1,9 @@
-import type { GameSpeed, TimeOfDay, Weather } from '../game/types'
+import type { FacilityType, GameSpeed, TimeOfDay, Weather } from '../game/types'
 import { BuildMenu } from './BuildMenu'
 
 interface UIPanelProps {
   money: number
+  reputation: number
   day: number
   timeOfDay: TimeOfDay
   weather: Weather
@@ -12,7 +13,7 @@ interface UIPanelProps {
   buildMenuOpen: boolean
   buildModeActive: boolean
   onToggleBuildMenu: () => void
-  onSelectFeeder: () => void
+  onSelectFacility: (type: FacilityType) => void
   onCloseBuildMenu: () => void
   onCancelBuildMode: () => void
   onReset: () => void
@@ -28,6 +29,7 @@ const SPEEDS: GameSpeed[] = [1, 2, 3]
 
 export function UIPanel({
   money,
+  reputation,
   day,
   timeOfDay,
   weather,
@@ -37,7 +39,7 @@ export function UIPanel({
   buildMenuOpen,
   buildModeActive,
   onToggleBuildMenu,
-  onSelectFeeder,
+  onSelectFacility,
   onCloseBuildMenu,
   onCancelBuildMode,
   onReset,
@@ -50,6 +52,9 @@ export function UIPanel({
         <h1 className="ui-title">ジュラパク！</h1>
         <div className="ui-stats">
           <span className="ui-stat-badge ui-stat-money">💰 ￥{money.toLocaleString()}</span>
+          <span className="ui-stat-badge ui-stat-reputation" title={`評判 ${reputation}`}>
+            ⭐ 評判：{reputation} <span aria-hidden="true">{'★'.repeat(Math.min(5, Math.floor(reputation / 10)))}</span>
+          </span>
           <span className="ui-stat-badge">📅 {day}日目</span>
           <span className="ui-stat-badge">
             {TIME_ICON[timeOfDay]} {TIME_LABEL[timeOfDay]}
@@ -99,7 +104,7 @@ export function UIPanel({
       </div>
 
       {buildMenuOpen && (
-        <BuildMenu money={money} onSelectFeeder={onSelectFeeder} onClose={onCloseBuildMenu} />
+        <BuildMenu money={money} onSelect={onSelectFacility} onClose={onCloseBuildMenu} />
       )}
     </div>
   )

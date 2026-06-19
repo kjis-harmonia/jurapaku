@@ -24,6 +24,8 @@ export const SAVE_KEY = 'jurapaku-save-v1'
 
 export const FACILITIES: Record<string, FacilityDef> = {
   feeder: { type: 'feeder', displayName: '木の餌場', cost: 5000 },
+  shop: { type: 'shop', displayName: 'モコの葉っぱクッキー屋', cost: 8000 },
+  toilet: { type: 'toilet', displayName: '休憩トイレ', cost: 6000 },
 }
 
 export const DAY_DURATION_MS = 60_000
@@ -36,6 +38,8 @@ export const NIGHT_INTERVAL_MULTIPLIER = 2.5
 export const RAIN_INTERVAL_MULTIPLIER = 1.6
 
 export const VISITOR_MONEY_RANGE = [10, 50] as const
+export const VISITOR_MAX_CONCURRENT = 8
+export const REPUTATION_VISITOR_CAP = 100
 
 export const AUTOSAVE_INTERVAL_MS = 3000
 
@@ -53,6 +57,7 @@ function defaultFacilities() {
 export function createDefaultSaveState(): GameSaveState {
   return {
     money: 10_000,
+    reputation: 0,
     day: 1,
     timeOfDay: 'day',
     weather: 'sunny',

@@ -1,14 +1,20 @@
 import { FACILITIES } from '../game/constants'
+import type { FacilityType } from '../game/types'
 
 interface BuildMenuProps {
   money: number
-  onSelectFeeder: () => void
+  onSelect: (type: FacilityType) => void
   onClose: () => void
 }
 
-export function BuildMenu({ money, onSelectFeeder, onClose }: BuildMenuProps) {
-  const feeder = FACILITIES.feeder
-  const affordable = money >= feeder.cost
+const FACILITY_ICONS: Record<FacilityType, string> = {
+  feeder: '🌿',
+  shop: '🍪',
+  toilet: '🚻',
+}
+
+export function BuildMenu({ money, onSelect, onClose }: BuildMenuProps) {
+  const facilities = Object.values(FACILITIES)
 
   return (
     <div className="build-menu-backdrop" onClick={onClose}>
@@ -19,15 +25,22 @@ export function BuildMenu({ money, onSelectFeeder, onClose }: BuildMenuProps) {
             ×
           </button>
         </div>
-        <button
-          type="button"
-          className="build-menu-item"
-          disabled={!affordable}
-          onClick={onSelectFeeder}
-        >
-          <span className="build-menu-item-name">🌿 {feeder.displayName}</span>
-          <span className="build-menu-item-cost">￥{feeder.cost.toLocaleString()}</span>
-        </button>
+        <div className="build-menu-list">
+          {facilities.map((facility) => (
+            <button
+              key={facility.type}
+              type="button"
+              className="build-menu-item"
+              disabled={money < facility.cost}
+              onClick={() => onSelect(facility.type)}
+            >
+              <span className="build-menu-item-name">
+                {FACILITY_ICONS[facility.type]} {facility.displayName}
+              </span>
+              <span className="build-menu-item-cost">￥{facility.cost.toLocaleString()}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   )

@@ -1,73 +1,55 @@
-# React + TypeScript + Vite
+# ジュラパク！
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+スマートフォン縦画面向けの、小さな恐竜保護区経営ゲームです。ReactがUI、Phaserがゲームシミュレーションを担当します。
 
-Currently, two official plugins are available:
+## 現在の実装範囲
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+PHASE 0からPHASE 1.6に加え、PHASE 2「経営拡張」を実装しています。
 
-## React Compiler
+- モコ（ミニリーフ）の歩行、睡眠、happy演出
+- 来園者3タイプの観察、満足度、施設利用、退場
+- 木の餌場、モコの葉っぱクッキー屋、休憩トイレのグリッド配置
+- 観察料と売店収益
+- 高満足退場と売店購入による評判上昇
+- 評判に応じた来園間隔の短縮（上限あり）
+- 昼夜、天候、効果音、ミュート、速度切替
+- localStorageへの自動保存と復元
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+PHASE 2では新しい恐竜、孵化、卒業、研究、図鑑、コンテスト、課金などは扱いません。
 
-## Expanding the ESLint configuration
+## 構成
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```text
+src/
+  components/          React UI
+    GameContainer.tsx  ReactとEventBusの接続、UI状態
+    UIPanel.tsx         ステータス・操作パネル
+    BuildMenu.tsx       施設選択
+    PhaserGame.tsx      Phaserのマウントと破棄
+  game/
+    entities/
+      Dinosaur.ts       モコの状態機械
+      Visitor.ts        来園者の移動・満足度・施設利用
+    scenes/
+      MainScene.ts      シミュレーション、施設配置、経営状態
+    constants.ts        バランス値と初期状態
+    types.ts            共有データ型
+    EventBus.ts         ReactとPhaser間のイベント
+    SaveManager.ts      localStorage保存・旧データ補完
+    SoundManager.ts     Web Audio API効果音
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Reactはゲーム状態を直接変更せず、操作を`EventBus`へ送ります。資金、評判、施設、来園者の生成などの正本は`MainScene`が持ち、個体の行動は各entityが担当します。
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## セーブ
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+キーは`jurapaku-save-v1`です。資金、評判、日数、昼夜、天候、施設種別とグリッド座標、モコの座標、音設定、ゲーム速度を保存します。PHASE 1.6以前のデータに不足する項目は既定値で補完します。
+
+## 開発
+
+```bash
+npm install
+npm run dev
+npm run build
+npm run lint
 ```

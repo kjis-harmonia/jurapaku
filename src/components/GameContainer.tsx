@@ -4,12 +4,13 @@ import { UIPanel } from './UIPanel'
 import { eventBus, type BuildResultPayload, type UiStatePayload } from '../game/EventBus'
 import { createDefaultSaveState } from '../game/constants'
 import { soundManager } from '../game/SoundManager'
-import type { GameSpeed } from '../game/types'
+import type { FacilityType, GameSpeed } from '../game/types'
 
 const defaults = createDefaultSaveState()
 
 export function GameContainer() {
   const [money, setMoney] = useState(defaults.money)
+  const [reputation, setReputation] = useState(defaults.reputation)
   const [day, setDay] = useState(defaults.day)
   const [timeOfDay, setTimeOfDay] = useState(defaults.timeOfDay)
   const [weather, setWeather] = useState(defaults.weather)
@@ -22,6 +23,7 @@ export function GameContainer() {
   useEffect(() => {
     const onState = (payload: UiStatePayload) => {
       setMoney(payload.money)
+      setReputation(payload.reputation)
       setDay(payload.day)
       setTimeOfDay(payload.timeOfDay)
       setWeather(payload.weather)
@@ -31,7 +33,7 @@ export function GameContainer() {
     const onInfo = (message: string) => setInfo(message)
     const onBuildResult = (result: BuildResultPayload) => {
       setInfo(result.message)
-      setBuildModeActive(false)
+      if (result.success) setBuildModeActive(false)
     }
 
     eventBus.on('state-update', onState)
@@ -52,16 +54,16 @@ export function GameContainer() {
   }
   const handleCloseBuildMenu = () => setBuildMenuOpen(false)
 
-  const handleSelectFeeder = () => {
+  const handleSelectFacility = (type: FacilityType) => {
     soundManager.playUiTap()
     setBuildMenuOpen(false)
     setBuildModeActive(true)
-    eventBus.emit('set-build-mode', true)
+    eventBus.emit('set-build-mode', type)
   }
 
   const handleCancelBuildMode = () => {
     setBuildModeActive(false)
-    eventBus.emit('set-build-mode', false)
+    eventBus.emit('set-build-mode', null)
     setInfo('設置をやめました')
   }
 
@@ -90,6 +92,7 @@ export function GameContainer() {
       </div>
       <UIPanel
         money={money}
+        reputation={reputation}
         day={day}
         timeOfDay={timeOfDay}
         weather={weather}
@@ -99,7 +102,7 @@ export function GameContainer() {
         buildMenuOpen={buildMenuOpen}
         buildModeActive={buildModeActive}
         onToggleBuildMenu={handleToggleBuildMenu}
-        onSelectFeeder={handleSelectFeeder}
+        onSelectFacility={handleSelectFacility}
         onCloseBuildMenu={handleCloseBuildMenu}
         onCancelBuildMode={handleCancelBuildMode}
         onReset={handleReset}

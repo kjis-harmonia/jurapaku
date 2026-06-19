@@ -1,5 +1,22 @@
 import { SAVE_KEY, createDefaultSaveState } from './constants'
-import type { GameSaveState } from './types'
+import type { FacilityData, FacilityType, GameSaveState } from './types'
+
+const FACILITY_TYPES = new Set<FacilityType>(['feeder', 'shop', 'toilet'])
+
+function validFacilities(value: unknown, fallback: FacilityData[]): FacilityData[] {
+  if (!Array.isArray(value)) return fallback
+  return value.filter((facility): facility is FacilityData => {
+    if (!facility || typeof facility !== 'object') return false
+    const item = facility as Partial<FacilityData>
+    return (
+      typeof item.id === 'string' &&
+      typeof item.type === 'string' &&
+      FACILITY_TYPES.has(item.type as FacilityType) &&
+      Number.isInteger(item.gridX) &&
+      Number.isInteger(item.gridY)
+    )
+  })
+}
 
 export const SaveManager = {
   load(): GameSaveState {
@@ -13,7 +30,8 @@ export const SaveManager = {
         ...fallback,
         ...parsed,
         dinosaur: { ...fallback.dinosaur, ...parsed.dinosaur },
-        facilities: Array.isArray(parsed.facilities) ? parsed.facilities : fallback.facilities,
+        reputation: Number.isFinite(parsed.reputation) ? Math.max(0, parsed.reputation) : fallback.reputation,
+        facilities: validFacilities(parsed.facilities, fallback.facilities),
       }
     } catch {
       return fallback
