@@ -11,6 +11,7 @@ const FACILITY_ICONS: Record<FacilityType, string> = {
   feeder: '🌿',
   shop: '🍪',
   toilet: '🚻',
+  hatchery: '🥚',
 }
 
 export function BuildMenu({ money, onSelect, onClose }: BuildMenuProps) {

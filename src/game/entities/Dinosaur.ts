@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import type { DinoState } from '../types'
+import type { DinoState, DinosaurSaveData, SpeciesId } from '../types'
 import { soundManager } from '../SoundManager'
 
 export interface PenBounds {
@@ -33,7 +33,12 @@ const BOB_SPEED = 9 // radians/sec while walking
  */
 export class Dinosaur extends Phaser.GameObjects.Sprite {
   state: DinoState = 'walking'
+  readonly id: string
+  readonly speciesId: SpeciesId
+  readonly generation: number
   name_: string
+  protectionYears: number
+  popularity: number
   private bounds: PenBounds
   private walkTarget: Phaser.Math.Vector2 | null = null
   private forcedStateTimer = 0
@@ -42,18 +47,40 @@ export class Dinosaur extends Phaser.GameObjects.Sprite {
   private bobPhase = 0
   private zzzTimer = 0
 
-  constructor(scene: Phaser.Scene, x: number, y: number, name: string, bounds: PenBounds) {
-    super(scene, x, y, 'tex_dino')
-    this.name_ = name
+  constructor(scene: Phaser.Scene, data: DinosaurSaveData, bounds: PenBounds) {
+    super(scene, data.x, data.y, data.speciesId === 'starhorn' ? 'tex_dino_starhorn' : 'tex_dino')
+    this.id = data.id
+    this.name_ = data.name
+    this.speciesId = data.speciesId
+    this.generation = data.generation
+    this.protectionYears = data.protectionYears
+    this.popularity = data.popularity
     this.bounds = bounds
-    this.baseX = x
-    this.baseY = y
+    this.baseX = data.x
+    this.baseY = data.y
     scene.add.existing(this)
     this.setOrigin(0.5, 0.78)
   }
 
   get logicalY() {
     return this.baseY
+  }
+
+  get logicalX() {
+    return this.baseX
+  }
+
+  toSaveData(): DinosaurSaveData {
+    return {
+      id: this.id,
+      name: this.name_,
+      speciesId: this.speciesId,
+      generation: this.generation,
+      protectionYears: this.protectionYears,
+      popularity: this.popularity,
+      x: this.baseX,
+      y: this.baseY,
+    }
   }
 
   private pickWalkTarget() {

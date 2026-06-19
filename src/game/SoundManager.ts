@@ -76,6 +76,28 @@ class SoundManager {
     this.tone(2000, 1600, 0.18, 'triangle', 0.14, 0.05)
   }
 
+  /** A soft three-note sparkle for reputation gains. */
+  playReputation() {
+    if (!this.enabled) return
+    this.tone(660, 720, 0.12, 'sine', 0.11)
+    this.tone(880, 960, 0.14, 'sine', 0.1, 0.07)
+    this.tone(1100, 1240, 0.16, 'triangle', 0.08, 0.14)
+  }
+
+  playHatch() {
+    if (!this.enabled) return
+    this.tone(420, 780, 0.22, 'sine', 0.14)
+    this.tone(620, 1180, 0.28, 'triangle', 0.12, 0.12)
+    this.tone(900, 1500, 0.32, 'sine', 0.1, 0.24)
+  }
+
+  playCelebration() {
+    if (!this.enabled) return
+    for (let i = 0; i < 4; i++) {
+      this.tone(520 + i * 130, 650 + i * 150, 0.16, 'triangle', 0.1, i * 0.1)
+    }
+  }
+
   /** Short neutral blip for menu/button taps. */
   playUiTap() {
     if (!this.enabled) return

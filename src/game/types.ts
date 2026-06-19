@@ -5,8 +5,10 @@ export type TimeOfDay = 'day' | 'night'
 export type Weather = 'sunny' | 'rainy'
 export type DinoState = 'walking' | 'sleeping' | 'happy'
 export type VisitorType = 'boy' | 'girl' | 'office'
-export type FacilityType = 'feeder' | 'shop' | 'toilet'
+export type FacilityType = 'feeder' | 'shop' | 'toilet' | 'hatchery'
 export type GameSpeed = 1 | 2 | 3
+export type SpeciesId = 'mini-leaf' | 'starhorn'
+export type VisitorCatalogKind = 'regular' | 'rare'
 
 export interface SpeciesDef {
   id: string
@@ -27,8 +29,48 @@ export interface FacilityData {
 }
 
 export interface DinosaurSaveData {
+  id: string
+  name: string
+  speciesId: SpeciesId
+  generation: number
+  protectionYears: number
+  popularity: number
   x: number
   y: number
+}
+
+export interface EggSaveData {
+  id: string
+  speciesId: SpeciesId
+  rarity: 'normal' | 'rare'
+  generation: number
+  remainingMs: number
+}
+
+export interface LegendData {
+  id: string
+  name: string
+  speciesId: SpeciesId
+  generation: number
+  popularity: number
+  graduatedDay: number
+}
+
+export interface VisitorCatalogEntry {
+  id: string
+  displayName: string
+  kind: VisitorCatalogKind
+  firstVisitDay: number
+  visits: number
+  level: number
+}
+
+export interface ContestSaveData {
+  nextContestDay: number
+  held: number
+  wins: number
+  lastTitle: string | null
+  lastRank: number | null
 }
 
 export interface GameSaveState {
@@ -38,7 +80,14 @@ export interface GameSaveState {
   timeOfDay: TimeOfDay
   weather: Weather
   facilities: FacilityData[]
-  dinosaur: DinosaurSaveData
+  dinosaurs: DinosaurSaveData[]
+  egg: EggSaveData | null
+  legends: LegendData[]
+  nextGeneration: number
+  visitorCatalog: VisitorCatalogEntry[]
+  contest: ContestSaveData
+  unlockedSpecies: SpeciesId[]
+  rareEggs: number
   soundOn: boolean
   gameSpeed: GameSpeed
 }

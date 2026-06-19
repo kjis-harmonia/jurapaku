@@ -62,7 +62,7 @@
   font-weight: 800;
   color: #6d4423;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
-  letter-spacing: 0.5px;
+  letter-spacing: 0;
 }
 
 .ui-stats {
@@ -96,6 +96,41 @@
 .ui-stat-reputation {
   color: #7b4d12;
   background: #fff8e1;
+  border-color: #e5b94f;
+  box-shadow: 0 2px 0 #d49b2c;
+}
+
+.ui-stat-reputation-gained {
+  animation: reputation-badge-pop 520ms ease-out;
+}
+
+.ui-reputation-stars {
+  display: inline-flex;
+  gap: 1px;
+  color: #d99a1f;
+  line-height: 1;
+}
+
+.ui-stat-reputation-gained .ui-reputation-star-filled {
+  display: inline-block;
+  animation: reputation-star-pop 440ms ease-out both;
+}
+
+.ui-reputation-star-empty {
+  color: #c9b890;
+}
+
+@keyframes reputation-badge-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.12) rotate(-1deg); }
+  70% { transform: scale(0.98) rotate(1deg); }
+  100% { transform: scale(1); }
+}
+
+@keyframes reputation-star-pop {
+  0% { transform: scale(0.55); opacity: 0.35; }
+  55% { transform: scale(1.45); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .ui-toolbar {
@@ -104,6 +139,184 @@
   justify-content: space-between;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.ui-generation-panel {
+  display: grid;
+  gap: 4px;
+  color: #5d4037;
+  font-size: 11px;
+}
+
+.ui-dinosaur-roster {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.ui-dinosaur-entry,
+.ui-egg-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  min-height: 25px;
+  padding: 3px 7px;
+  border: 2px solid #b8d7a5;
+  border-radius: 7px;
+  background: #f8fff3;
+  white-space: nowrap;
+}
+
+.ui-dinosaur-entry strong {
+  color: #2f6b38;
+  font-size: 12px;
+}
+
+.ui-egg-status {
+  border-color: #e5c56f;
+  background: #fffbea;
+  color: #7a5912;
+  font-weight: 700;
+}
+
+.ui-legends {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  overflow-x: auto;
+  color: #795548;
+  white-space: nowrap;
+}
+
+.ui-legends-title {
+  color: #9a6700;
+  font-weight: 800;
+}
+
+.ui-phase4-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.ui-contest-status,
+.ui-rare-unlock {
+  color: #72521d;
+  font-weight: 700;
+}
+
+.ui-rare-unlock {
+  color: #6a4ca0;
+}
+
+.ui-catalog-button {
+  flex: 0 0 auto;
+  border: 2px solid #9f8bc4;
+  border-radius: 7px;
+  background: #f6f0ff;
+  color: #5d4387;
+  padding: 3px 7px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.catalog-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(40, 26, 12, 0.5);
+}
+
+.catalog-modal {
+  width: 100%;
+  max-height: 72%;
+  padding: 14px 14px 20px;
+  overflow-y: auto;
+  border: 4px solid #9f8bc4;
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+  background: #fffdf8;
+}
+
+.catalog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: #5d4387;
+}
+
+.catalog-header span {
+  font-size: 12px;
+}
+
+.catalog-list {
+  display: grid;
+  gap: 7px;
+}
+
+.catalog-entry {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  padding: 8px;
+  border: 2px solid #d8c9ad;
+  border-radius: 7px;
+  color: #5d4037;
+  background: #fffaf0;
+}
+
+.catalog-entry-rare {
+  border-color: #aa8bd4;
+  background: #f8f2ff;
+}
+
+.catalog-entry-mark {
+  color: #d99a1f;
+  text-align: center;
+}
+
+.catalog-entry-rare .catalog-entry-mark {
+  color: #8158b5;
+}
+
+.catalog-entry-main,
+.catalog-entry-stats {
+  display: grid;
+  min-width: 0;
+}
+
+.catalog-entry-main strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catalog-entry-main span,
+.catalog-entry-stats {
+  font-size: 10px;
+  color: #806b56;
+}
+
+.catalog-entry-stats {
+  text-align: right;
+}
+
+.catalog-empty {
+  margin: 12px 0;
+  color: #806b56;
+  font-size: 12px;
+  text-align: center;
 }
 
 .ui-speed-group {

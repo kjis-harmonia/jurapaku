@@ -22,17 +22,32 @@ import {
   NIGHT_INTERVAL_MULTIPLIER,
   RAIN_INTERVAL_MULTIPLIER,
   REPUTATION_VISITOR_CAP,
+  REPUTATION_MAX_VISITOR_BOOST,
   VISITOR_MAX_CONCURRENT,
   AUTOSAVE_INTERVAL_MS,
+  EGG_HATCH_DURATION_MS,
+  MINI_LEAF_NAMES,
+  STARHORN_NAMES,
+  CONTEST_INTERVAL_DAYS,
+  CONTEST_RARE_UNLOCK_SCORE,
+  formatGeneration,
+  protectionYearsForSpecies,
+  speciesDisplayName,
 } from '../constants'
 import { SaveManager } from '../SaveManager'
 import { eventBus } from '../EventBus'
 import { soundManager } from '../SoundManager'
-import type { FacilityData, FacilityType, GameSaveState, GameSpeed, VisitorType } from '../types'
+import type { DinosaurSaveData, FacilityData, FacilityType, GameSaveState, GameSpeed, VisitorType } from '../types'
 import { Dinosaur } from '../entities/Dinosaur'
 import { Visitor } from '../entities/Visitor'
+import {
+  RARE_VISITORS,
+  REGULAR_VISITORS,
+  type SpecialVisitorProfile,
+} from '../visitorProfiles'
 
 const ENTRY_Y = PEN_Y + PEN_HEIGHT + 50
+const CONTEST_TITLES = ['人気恐竜大会', '可愛い恐竜大会', '保護区ランキング'] as const
 const AMENITY_GRID_SLOTS = [
   { gridX: 0, gridY: 10 }, { gridX: 1, gridY: 10 },
   { gridX: 2, gridY: 10 }, { gridX: 3, gridY: 10 },
@@ -47,9 +62,13 @@ interface FacilitySpriteRecord {
 
 export class MainScene extends Phaser.Scene {
   private saveState!: GameSaveState
-  private dino!: Dinosaur
+  private dinosaurs: Dinosaur[] = []
   private visitors: Visitor[] = []
   private facilitySprites: FacilitySpriteRecord[] = []
+  private eggSprite: Phaser.GameObjects.Sprite | null = null
+  private eggLabel: Phaser.GameObjects.Text | null = null
+  private hatching = false
+  private lastEggSecond = -1
 
   private buildType: FacilityType | null = null
   private buildHighlight!: Phaser.GameObjects.Graphics
@@ -96,6 +115,29 @@ export class MainScene extends Phaser.Scene {
     g.fillStyle(0xffb74d, 1) // little cheek blush
     g.fillCircle(31, 13, 2)
     g.generateTexture('tex_dino', 46, 30)
+    g.clear()
+
+    // Hoshitsuno juvenile: a gentle rare herbivore with a star-shaped frill.
+    g.fillStyle(0x5b789c, 1)
+    g.fillEllipse(19, 23, 29, 8)
+    g.fillStyle(0x89aee0, 1)
+    g.fillRoundedRect(9, 19, 6, 8, 2)
+    g.fillRoundedRect(24, 19, 6, 8, 2)
+    g.fillStyle(0x9fc2ee, 1)
+    g.fillEllipse(20, 16, 32, 19)
+    g.fillStyle(0x6f8fc0, 1)
+    g.fillCircle(35, 11, 11)
+    g.fillTriangle(29, 5, 33, 4, 31, -1)
+    g.fillTriangle(36, 3, 40, 5, 40, -1)
+    g.fillTriangle(41, 7, 45, 10, 47, 4)
+    g.fillStyle(0xfff176, 1)
+    g.fillCircle(34, 10, 2)
+    g.fillCircle(40, 15, 1.5)
+    g.fillStyle(0xffffff, 1)
+    g.fillCircle(38, 9, 3)
+    g.fillStyle(0x263238, 1)
+    g.fillCircle(39, 9, 1.4)
+    g.generateTexture('tex_dino_starhorn', 49, 32)
     g.clear()
 
     // visitors share a body silhouette; accessories tell them apart
@@ -158,33 +200,105 @@ export class MainScene extends Phaser.Scene {
     g.generateTexture('tex_feeder', 32, 19)
     g.clear()
 
-    // Leaf-cookie kiosk with a striped awning and leaf sign.
-    g.fillStyle(0x6d4c41, 1)
-    g.fillRoundedRect(3, 9, 34, 27, 3)
-    g.fillStyle(0xfff3cd, 1)
-    g.fillRect(7, 17, 26, 15)
-    g.fillStyle(0xef5350, 1)
-    g.fillRect(3, 8, 34, 8)
-    g.fillStyle(0xffffff, 1)
-    g.fillRect(9, 8, 6, 8)
-    g.fillRect(25, 8, 6, 8)
-    g.fillStyle(0x4caf50, 1)
-    g.fillEllipse(20, 5, 12, 7)
+    // A tiny leaf-cookie wagon with scalloped awning, jars and cookie sign.
+    g.fillStyle(0x000000, 0.12)
+    g.fillEllipse(20, 36, 36, 6)
+    g.fillStyle(0x8d5a3b, 1)
+    g.fillRoundedRect(3, 12, 34, 23, 4)
+    g.fillStyle(0xfff4d6, 1)
+    g.fillRoundedRect(7, 18, 26, 12, 2)
+    g.fillStyle(0x8bc34a, 1)
+    g.fillRect(3, 10, 34, 7)
+    g.fillCircle(7, 17, 4)
+    g.fillCircle(19, 17, 4)
+    g.fillCircle(31, 17, 4)
+    g.fillStyle(0xffd166, 1)
+    g.fillRect(9, 10, 7, 7)
+    g.fillRect(23, 10, 7, 7)
+    g.fillCircle(13, 17, 4)
+    g.fillCircle(25, 17, 4)
+    g.fillStyle(0xd99a45, 1)
+    g.fillCircle(14, 24, 4)
+    g.fillCircle(26, 24, 4)
+    g.fillStyle(0x6d4423, 1)
+    g.fillCircle(13, 23, 0.8)
+    g.fillCircle(15, 25, 0.8)
+    g.fillCircle(25, 23, 0.8)
+    g.fillCircle(27, 25, 0.8)
     g.fillStyle(0x5d4037, 1)
-    g.fillRect(19, 4, 2, 7)
+    g.fillRect(19, 3, 2, 8)
+    g.fillStyle(0x66bb6a, 1)
+    g.fillEllipse(20, 4, 15, 8)
+    g.fillStyle(0xa5d66a, 1)
+    g.fillEllipse(17, 3, 6, 3)
     g.generateTexture('tex_shop', 40, 38)
     g.clear()
 
-    // Compact park toilet with a clear door marker.
+    // Reserve-style timber toilet with a living roof and leaf emblem.
+    g.fillStyle(0x000000, 0.12)
+    g.fillEllipse(20, 38, 34, 5)
+    g.fillStyle(0x795548, 1)
+    g.fillRoundedRect(5, 10, 30, 28, 3)
+    g.fillStyle(0x9b7653, 1)
+    g.fillRect(8, 12, 4, 24)
+    g.fillRect(16, 12, 4, 24)
+    g.fillRect(28, 12, 4, 24)
+    g.fillStyle(0x4f7138, 1)
+    g.fillTriangle(2, 12, 38, 12, 20, 2)
+    g.fillStyle(0x7cb342, 1)
+    g.fillEllipse(12, 7, 14, 6)
+    g.fillEllipse(25, 6, 18, 7)
+    g.fillStyle(0x4e342e, 1)
+    g.fillRoundedRect(14, 17, 12, 21, 2)
     g.fillStyle(0xe8f5e9, 1)
-    g.fillRoundedRect(5, 5, 30, 33, 4)
-    g.lineStyle(2, 0x388e3c, 1)
-    g.strokeRoundedRect(5, 5, 30, 33, 4)
+    g.fillCircle(20, 14, 4)
     g.fillStyle(0x66bb6a, 1)
-    g.fillRoundedRect(11, 14, 18, 24, 2)
-    g.fillStyle(0xffffff, 1)
-    g.fillCircle(20, 10, 3)
+    g.fillEllipse(20, 14, 5, 8)
+    g.fillStyle(0xd7ccc8, 1)
+    g.fillCircle(23, 27, 1.2)
     g.generateTexture('tex_toilet', 40, 40)
+    g.clear()
+
+    // Timber-and-glass hatchery: the central home for each new generation.
+    g.fillStyle(0x000000, 0.12)
+    g.fillEllipse(20, 38, 38, 6)
+    g.fillStyle(0x6d4c41, 1)
+    g.fillRoundedRect(2, 13, 36, 25, 4)
+    g.fillStyle(0xb2dfdb, 0.9)
+    g.fillRoundedRect(7, 17, 26, 17, 5)
+    g.lineStyle(2, 0x4f776f, 1)
+    g.strokeRoundedRect(7, 17, 26, 17, 5)
+    g.fillStyle(0x4f7138, 1)
+    g.fillTriangle(0, 15, 40, 15, 20, 2)
+    g.fillStyle(0x8bc34a, 1)
+    g.fillEllipse(11, 8, 17, 7)
+    g.fillEllipse(27, 8, 19, 8)
+    g.fillStyle(0xfff4d6, 1)
+    g.fillCircle(20, 25, 7)
+    g.generateTexture('tex_hatchery', 40, 40)
+    g.clear()
+
+    g.fillStyle(0x000000, 0.1)
+    g.fillEllipse(10, 19, 17, 4)
+    g.fillStyle(0xfff3cd, 1)
+    g.fillEllipse(10, 10, 15, 19)
+    g.fillStyle(0xffffff, 0.75)
+    g.fillEllipse(7, 6, 4, 7)
+    g.fillStyle(0x8bc34a, 1)
+    g.fillCircle(13, 12, 2)
+    g.generateTexture('tex_egg', 20, 21)
+    g.clear()
+
+    g.fillStyle(0x000000, 0.1)
+    g.fillEllipse(10, 19, 17, 4)
+    g.fillStyle(0xb7ccff, 1)
+    g.fillEllipse(10, 10, 15, 19)
+    g.fillStyle(0xe8eeff, 0.85)
+    g.fillEllipse(7, 6, 4, 7)
+    g.fillStyle(0xffe66d, 1)
+    g.fillCircle(12, 10, 2.5)
+    g.fillCircle(7, 14, 1.5)
+    g.generateTexture('tex_rare_egg', 20, 21)
     g.clear()
 
     // raindrop
@@ -210,7 +324,8 @@ export class MainScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(0x8bc34a)
     this.drawStaticScenery()
     this.createFacilitiesFromState()
-    this.createDino()
+    this.createDinosaursFromState()
+    this.ensureEgg()
     this.createOverlays()
 
     this.buildHighlight = this.add.graphics().setDepth(50)
@@ -353,15 +468,23 @@ export class MainScene extends Phaser.Scene {
       .setDepth(1000)
   }
 
-  private createDino() {
-    const pos = this.saveState.dinosaur
-    this.dino = new Dinosaur(this, pos.x, pos.y, 'モコ', {
+  private createDinosaur(data: DinosaurSaveData): Dinosaur {
+    const dinosaur = new Dinosaur(this, data, {
       x: PEN_X,
       y: PEN_Y,
       width: PEN_WIDTH,
       height: PEN_HEIGHT,
     })
-    this.dino.setDepth(5)
+    dinosaur.setDepth(5)
+    if (data.generation > 1 && data.speciesId === 'mini-leaf') dinosaur.setTint(0xe8ffd9)
+    this.dinosaurs.push(dinosaur)
+    return dinosaur
+  }
+
+  private createDinosaursFromState() {
+    this.dinosaurs.forEach((dinosaur) => dinosaur.destroy())
+    this.dinosaurs = []
+    this.saveState.dinosaurs.forEach((data) => this.createDinosaur(data))
   }
 
   private createFacilitiesFromState() {
@@ -373,7 +496,7 @@ export class MainScene extends Phaser.Scene {
   }
 
   private facilityWorldPosition(facility: FacilityData): Phaser.Math.Vector2 {
-    if (facility.type === 'feeder') {
+    if (facility.type === 'feeder' || facility.type === 'hatchery') {
       return new Phaser.Math.Vector2(
         PEN_X + facility.gridX * TILE_SIZE + TILE_SIZE / 2,
         PEN_Y + facility.gridY * TILE_SIZE + TILE_SIZE / 2,
@@ -398,6 +521,156 @@ export class MainScene extends Phaser.Scene {
       .map((facility) => new Phaser.Math.Vector2(facility.sprite.x, facility.sprite.y))
   }
 
+  private hatcheryPosition(): Phaser.Math.Vector2 | null {
+    const hatchery = this.facilitySprites.find((facility) => facility.data.type === 'hatchery')
+    return hatchery ? new Phaser.Math.Vector2(hatchery.sprite.x, hatchery.sprite.y) : null
+  }
+
+  private destroyEggVisual() {
+    this.eggSprite?.destroy()
+    this.eggLabel?.destroy()
+    this.eggSprite = null
+    this.eggLabel = null
+  }
+
+  private createEggVisual() {
+    this.destroyEggVisual()
+    const position = this.hatcheryPosition()
+    if (!this.saveState.egg || !position) return
+    const texture = this.saveState.egg.rarity === 'rare' ? 'tex_rare_egg' : 'tex_egg'
+    this.eggSprite = this.add.sprite(position.x, position.y + 3, texture).setDepth(8)
+    this.eggLabel = this.add
+      .text(position.x, position.y - 22, '', {
+        fontSize: '10px',
+        color: '#5d4037',
+        fontStyle: 'bold',
+        backgroundColor: '#fff8e1dd',
+        padding: { x: 4, y: 2 },
+      })
+      .setOrigin(0.5)
+      .setDepth(9)
+    this.updateEggLabel()
+  }
+
+  private updateEggLabel() {
+    if (!this.eggLabel || !this.saveState.egg) return
+    const seconds = Math.max(0, Math.ceil(this.saveState.egg.remainingMs / 1000))
+    this.eggLabel.setText(seconds > 0 ? `孵化まで ${seconds}秒` : 'もうすぐ誕生！')
+  }
+
+  private ensureEgg() {
+    if (this.saveState.egg || this.hatching || this.dinosaurs.length >= 2 || !this.hatcheryPosition()) {
+      if (this.saveState.egg && !this.eggSprite) this.createEggVisual()
+      return
+    }
+    const useRareEgg = this.saveState.rareEggs > 0 && this.saveState.unlockedSpecies.includes('starhorn')
+    if (useRareEgg) this.saveState.rareEggs -= 1
+    this.saveState.egg = {
+      id: `egg-${Date.now()}`,
+      speciesId: useRareEgg ? 'starhorn' : 'mini-leaf',
+      rarity: useRareEgg ? 'rare' : 'normal',
+      generation: this.saveState.nextGeneration,
+      remainingMs: EGG_HATCH_DURATION_MS,
+    }
+    this.createEggVisual()
+    this.persist()
+    this.emitState()
+    const eggName = useRareEgg ? 'レアなホシツノの卵' : `${formatGeneration(this.saveState.nextGeneration)}ミニリーフの卵`
+    eventBus.emit('info', `${eggName}を迎えました`)
+  }
+
+  private updateEgg(delta: number) {
+    const egg = this.saveState.egg
+    if (!egg || this.hatching) return
+    egg.remainingMs = Math.max(0, egg.remainingMs - delta)
+    this.updateEggLabel()
+    const seconds = Math.ceil(egg.remainingMs / 1000)
+    if (seconds !== this.lastEggSecond) {
+      this.lastEggSecond = seconds
+      this.emitState()
+    }
+    if (egg.remainingMs <= 0) this.startHatching()
+  }
+
+  private startHatching() {
+    const egg = this.saveState.egg
+    const position = this.hatcheryPosition()
+    if (!egg || !position || this.hatching) return
+    this.hatching = true
+    soundManager.playHatch()
+    eventBus.emit('info', '卵がきらきら光りはじめました')
+
+    if (this.eggSprite) {
+      this.tweens.add({
+        targets: this.eggSprite,
+        angle: { from: -8, to: 8 },
+        scale: { from: 1, to: 1.16 },
+        duration: 90,
+        yoyo: true,
+        repeat: 6,
+      })
+    }
+    const glow = this.add.circle(position.x, position.y, 9, 0xfff59d, 0.8).setDepth(7)
+    this.tweens.add({
+      targets: glow,
+      scale: 4,
+      alpha: 0,
+      duration: 1000,
+      ease: 'Cubic.easeOut',
+      onComplete: () => glow.destroy(),
+    })
+    for (let i = 0; i < 8; i++) {
+      const sparkle = this.add
+        .text(position.x, position.y, i % 2 === 0 ? '★' : '✦', { fontSize: '11px', color: '#fff176' })
+        .setOrigin(0.5)
+        .setDepth(10)
+      const angle = (Math.PI * 2 * i) / 8
+      this.tweens.add({
+        targets: sparkle,
+        x: position.x + Math.cos(angle) * 34,
+        y: position.y + Math.sin(angle) * 30,
+        alpha: 0,
+        duration: 850,
+        delay: i * 35,
+        onComplete: () => sparkle.destroy(),
+      })
+    }
+    this.time.delayedCall(1050, () => this.completeHatch())
+  }
+
+  private completeHatch() {
+    const egg = this.saveState.egg
+    if (!egg) {
+      this.hatching = false
+      return
+    }
+    const namePool = egg.speciesId === 'starhorn' ? STARHORN_NAMES : MINI_LEAF_NAMES
+    const name = namePool[(egg.generation - 2) % namePool.length]
+    const data: DinosaurSaveData = {
+      id: `dino-${egg.generation}-${Date.now()}`,
+      name,
+      speciesId: egg.speciesId,
+      generation: egg.generation,
+      protectionYears: 0,
+      popularity: 0,
+      x: Phaser.Math.Between(PEN_X + 30, PEN_X + PEN_WIDTH - 30),
+      y: Phaser.Math.Between(PEN_Y + 30, PEN_Y + PEN_HEIGHT - 30),
+    }
+    this.saveState.egg = null
+    this.lastEggSecond = -1
+    this.saveState.nextGeneration = Math.max(this.saveState.nextGeneration, egg.generation + 1)
+    this.destroyEggVisual()
+    const dinosaur = this.createDinosaur(data).setScale(0.2).setAlpha(0)
+    this.tweens.add({ targets: dinosaur, scale: 1, alpha: 1, duration: 500, ease: 'Back.easeOut' })
+    this.hatching = false
+    this.emitState()
+    this.persist()
+    eventBus.emit(
+      'info',
+      `${formatGeneration(data.generation)}の${speciesDisplayName(data.speciesId)}「${name}」が元気に孵化しました！`,
+    )
+  }
+
   // ---------- build mode ----------
 
   private handleSetBuildMode(type: FacilityType | null) {
@@ -411,11 +684,15 @@ export class MainScene extends Phaser.Scene {
   private drawBuildHighlight() {
     this.buildHighlight.clear()
     if (!this.buildType) return
-    if (this.buildType === 'feeder') {
+    const isPenFacility = this.buildType === 'feeder' || this.buildType === 'hatchery'
+    if (isPenFacility) {
       for (let gx = 0; gx < PEN_COLS; gx++) {
         for (let gy = 0; gy < PEN_ROWS; gy++) {
           const occupied = this.saveState.facilities.some(
-            (facility) => facility.type === 'feeder' && facility.gridX === gx && facility.gridY === gy,
+            (facility) =>
+              (facility.type === 'feeder' || facility.type === 'hatchery') &&
+              facility.gridX === gx &&
+              facility.gridY === gy,
           )
           const x = PEN_X + gx * TILE_SIZE
           const y = PEN_Y + gy * TILE_SIZE
@@ -428,7 +705,11 @@ export class MainScene extends Phaser.Scene {
 
     for (const slot of AMENITY_GRID_SLOTS) {
       const occupied = this.saveState.facilities.some(
-        (facility) => facility.type !== 'feeder' && facility.gridX === slot.gridX && facility.gridY === slot.gridY,
+        (facility) =>
+          facility.type !== 'feeder' &&
+          facility.type !== 'hatchery' &&
+          facility.gridX === slot.gridX &&
+          facility.gridY === slot.gridY,
       )
       const x = slot.gridX * TILE_SIZE
       const y = slot.gridY * TILE_SIZE
@@ -441,25 +722,32 @@ export class MainScene extends Phaser.Scene {
     soundManager.unlock()
     if (!this.buildType) return
 
-    const isFeeder = this.buildType === 'feeder'
-    const gridX = Math.floor((pointer.worldX - (isFeeder ? PEN_X : 0)) / TILE_SIZE)
-    const gridY = Math.floor((pointer.worldY - (isFeeder ? PEN_Y : 0)) / TILE_SIZE)
-    const inBounds = isFeeder
+    const isPenFacility = this.buildType === 'feeder' || this.buildType === 'hatchery'
+    const gridX = Math.floor((pointer.worldX - (isPenFacility ? PEN_X : 0)) / TILE_SIZE)
+    const gridY = Math.floor((pointer.worldY - (isPenFacility ? PEN_Y : 0)) / TILE_SIZE)
+    const inBounds = isPenFacility
       ? gridX >= 0 && gridX < PEN_COLS && gridY >= 0 && gridY < PEN_ROWS
       : AMENITY_GRID_SLOTS.some((slot) => slot.gridX === gridX && slot.gridY === gridY)
     if (!inBounds) {
-      const message = isFeeder ? '柵の中をタップしてください' : '黄色い柵外グリッドをタップしてください'
+      const message = isPenFacility ? '柵の中をタップしてください' : '黄色い柵外グリッドをタップしてください'
       eventBus.emit('build-result', { success: false, message })
       return
     }
 
     const occupied = this.saveState.facilities.some((facility) =>
-      isFeeder
-        ? facility.type === 'feeder' && facility.gridX === gridX && facility.gridY === gridY
-        : facility.type !== 'feeder' && facility.gridX === gridX && facility.gridY === gridY,
+      isPenFacility
+        ? (facility.type === 'feeder' || facility.type === 'hatchery') &&
+          facility.gridX === gridX && facility.gridY === gridY
+        : facility.type !== 'feeder' && facility.type !== 'hatchery' &&
+          facility.gridX === gridX && facility.gridY === gridY,
     )
     if (occupied) {
       eventBus.emit('build-result', { success: false, message: 'すでに何か置かれています' })
+      return
+    }
+
+    if (this.buildType === 'hatchery' && this.saveState.facilities.some((facility) => facility.type === 'hatchery')) {
+      eventBus.emit('build-result', { success: false, message: '孵化施設は1棟だけ建築できます' })
       return
     }
 
@@ -482,6 +770,7 @@ export class MainScene extends Phaser.Scene {
     this.emitState()
     this.persist()
     eventBus.emit('build-result', { success: true, message: `${facilityDef.displayName}を設置しました` })
+    if (type === 'hatchery') this.ensureEgg()
   }
 
   /** "ぽふん": a quick scale-punch plus a soft puff ring and a scatter of dust specks. */
@@ -527,7 +816,7 @@ export class MainScene extends Phaser.Scene {
     if (this.saveState.timeOfDay === 'night') multiplier *= NIGHT_INTERVAL_MULTIPLIER
     if (this.saveState.weather === 'rainy') multiplier *= RAIN_INTERVAL_MULTIPLIER
     const reputationRatio = Math.min(this.saveState.reputation, REPUTATION_VISITOR_CAP) / REPUTATION_VISITOR_CAP
-    multiplier *= 1 - reputationRatio * 0.4
+    multiplier *= 1 - reputationRatio * REPUTATION_MAX_VISITOR_BOOST
     return Phaser.Math.Between(min, max) * multiplier
   }
 
@@ -537,6 +826,87 @@ export class MainScene extends Phaser.Scene {
     if (roll < 1) return 'boy'
     if (roll < 2) return 'girl'
     return 'office'
+  }
+
+  private pickSpecialVisitor(): SpecialVisitorProfile | null {
+    const roll = Math.random()
+    if (roll < 0.035) return Phaser.Utils.Array.GetRandom(RARE_VISITORS)
+    if (roll >= 0.24) return null
+
+    const knownIds = new Set(
+      this.saveState.visitorCatalog
+        .filter((entry) => entry.kind === 'regular')
+        .map((entry) => entry.id),
+    )
+    const known = REGULAR_VISITORS.filter((profile) => knownIds.has(profile.id))
+    if (known.length > 0 && Math.random() < 0.7) return Phaser.Utils.Array.GetRandom(known)
+    return Phaser.Utils.Array.GetRandom(REGULAR_VISITORS)
+  }
+
+  private handleSpecialVisitor(profile: SpecialVisitorProfile, dinosaurId: string, visitor: Visitor) {
+    let catalogEntry = this.saveState.visitorCatalog.find((entry) => entry.id === profile.id)
+    if (!catalogEntry) {
+      catalogEntry = {
+        id: profile.id,
+        displayName: profile.displayName,
+        kind: profile.kind,
+        firstVisitDay: this.saveState.day,
+        visits: 0,
+        level: 1,
+      }
+      this.saveState.visitorCatalog.push(catalogEntry)
+    }
+    catalogEntry.visits += 1
+    catalogEntry.level = Math.min(10, 1 + Math.floor((catalogEntry.visits - 1) / 3))
+
+    const dinosaur = this.dinosaurs.find((active) => active.id === dinosaurId)
+    let message = `${profile.displayName}が保護区を訪れました`
+    switch (profile.eventType) {
+      case 'research':
+        if (dinosaur) dinosaur.popularity += catalogEntry.level
+        message = `${profile.displayName}の観察記録で人気度が上がりました`
+        break
+      case 'cheer':
+        this.addReputation(1, visitor.x, visitor.y)
+        message = `${profile.displayName}が友達に保護区を紹介しました`
+        break
+      case 'photo':
+        if (dinosaur) dinosaur.popularity += 1 + catalogEntry.level
+        message = `${profile.displayName}が素敵な写真を残しました`
+        break
+      case 'stream':
+        this.addReputation(1 + Math.floor(catalogEntry.level / 3), visitor.x, visitor.y)
+        message = `${profile.displayName}の配信で評判が上がりました`
+        break
+      case 'sponsor': {
+        const support = 400 + catalogEntry.level * 100
+        this.saveState.money += support
+        soundManager.playCoin()
+        this.showMoneyPopup(visitor.x, visitor.y, support)
+        message = `${profile.displayName}から保護活動の支援を受けました`
+        break
+      }
+      case 'famous':
+        if (dinosaur) dinosaur.popularity += 4
+        this.addReputation(2, visitor.x, visitor.y)
+        message = `${profile.displayName}がミニリーフの魅力を発表しました`
+        break
+      case 'television':
+        this.saveState.money += 1200
+        soundManager.playCoin()
+        this.showMoneyPopup(visitor.x, visitor.y, 1200)
+        this.addReputation(3, visitor.x, visitor.y)
+        message = 'テレビ取材でジュラパク！が紹介されました'
+        break
+      case 'viral':
+        this.addReputation(4, visitor.x, visitor.y)
+        message = `${profile.displayName}の配信が大きな話題になりました`
+        break
+    }
+    if (profile.kind === 'rare') soundManager.playCelebration()
+    this.emitState()
+    this.persist()
+    eventBus.emit('info', message)
   }
 
   private randomFacilityPosition(type: FacilityType): Phaser.Math.Vector2 | null {
@@ -549,15 +919,19 @@ export class MainScene extends Phaser.Scene {
   private addReputation(amount: number, x?: number, y?: number) {
     if (amount <= 0) return
     this.saveState.reputation += amount
+    soundManager.playReputation()
     if (x !== undefined && y !== undefined) this.showReputationPopup(x, y, amount)
     this.emitState()
     this.persist()
+    eventBus.emit('reputation-gained', { amount, total: this.saveState.reputation })
     eventBus.emit('info', '保護区の評判が少し上がりました')
   }
 
   private spawnVisitor() {
-    if (this.visitors.length >= VISITOR_MAX_CONCURRENT) return
-    const type = this.pickVisitorType()
+    if (this.visitors.length >= VISITOR_MAX_CONCURRENT || this.dinosaurs.length === 0) return
+    const specialVisitor = this.pickSpecialVisitor()
+    const type = specialVisitor?.visitorType ?? this.pickVisitorType()
+    const watchedDinosaur = Phaser.Utils.Array.GetRandom(this.dinosaurs)
     const fromLeft = Math.random() < 0.5
     const exitLeft = Math.random() < 0.5
 
@@ -576,6 +950,10 @@ export class MainScene extends Phaser.Scene {
       exit,
       type,
       {
+        dinosaurName: watchedDinosaur.name_,
+        visitorDisplayName: specialVisitor?.displayName ?? null,
+        specialKind: specialVisitor?.kind ?? null,
+        specialBubble: specialVisitor?.bubble ?? null,
         feederNearby: this.facilitySprites.some((facility) => facility.data.type === 'feeder'),
         crowdPenalty: this.visitors.length >= 3 && !toiletPosition ? 5 : 0,
         shopPosition: this.randomFacilityPosition('shop'),
@@ -585,6 +963,8 @@ export class MainScene extends Phaser.Scene {
       {
         onMoneyEarned: (amount, x, y) => {
           this.saveState.money += amount
+          const activeDinosaur = this.dinosaurs.find((dinosaur) => dinosaur.id === watchedDinosaur.id)
+          if (activeDinosaur) activeDinosaur.popularity += 1
           soundManager.playCoin()
           this.showMoneyPopup(x, y, amount)
           this.emitState()
@@ -598,6 +978,9 @@ export class MainScene extends Phaser.Scene {
           eventBus.emit('info', '来園者が葉っぱクッキーを買いました')
         },
         onInfo: (message) => eventBus.emit('info', message),
+        onVisitStarted: (v) => {
+          if (specialVisitor) this.handleSpecialVisitor(specialVisitor, watchedDinosaur.id, v)
+        },
         onExit: (v) => {
           if (v.satisfaction >= 25) {
             const baseGain = v.satisfaction >= 40 ? 3 : v.satisfaction >= 32 ? 2 : 1
@@ -640,24 +1023,43 @@ export class MainScene extends Phaser.Scene {
   }
 
   private showReputationPopup(x: number, y: number, amount: number) {
-    const popup = this.add
-      .text(x, y - 42, `評判 +${amount}`, {
-        fontSize: '12px',
-        color: '#7b1fa2',
-        fontStyle: 'bold',
-        backgroundColor: '#ffffffdd',
-        padding: { x: 6, y: 3 },
-      })
+    const label = this.add
+      .text(0, 0, `★ 評判 +${amount}`, { fontSize: '13px', color: '#7a4d00', fontStyle: 'bold' })
       .setOrigin(0.5)
-      .setDepth(22)
+    const width = label.width + 22
+    const bg = this.add.graphics()
+    bg.fillStyle(0xfff8d6, 0.98)
+    bg.lineStyle(2, 0xf0b429, 1)
+    bg.fillRoundedRect(-width / 2, -13, width, 26, 9)
+    bg.strokeRoundedRect(-width / 2, -13, width, 26, 9)
+    const popup = this.add.container(x, y - 44, [bg, label]).setDepth(25).setScale(0.5).setAlpha(0)
+    this.tweens.add({ targets: popup, scale: 1.08, alpha: 1, duration: 260, ease: 'Back.easeOut' })
     this.tweens.add({
       targets: popup,
-      y: popup.y - 20,
+      scale: 1,
+      y: popup.y - 24,
       alpha: 0,
-      duration: 900,
-      delay: 450,
+      duration: 750,
+      delay: 750,
       onComplete: () => popup.destroy(),
     })
+    for (let i = 0; i < 3; i++) {
+      const star = this.add
+        .text(x, y - 42, '★', { fontSize: '11px', color: '#ffd54f' })
+        .setOrigin(0.5)
+        .setDepth(24)
+      this.tweens.add({
+        targets: star,
+        x: x + (i - 1) * 20,
+        y: y - 72 - (i % 2) * 8,
+        alpha: 0,
+        scale: 1.5,
+        duration: 700,
+        delay: i * 70,
+        ease: 'Cubic.easeOut',
+        onComplete: () => star.destroy(),
+      })
+    }
   }
 
   // ---------- time / weather ----------
@@ -683,7 +1085,11 @@ export class MainScene extends Phaser.Scene {
       this.dayPhaseTimer = 0
       const wasNight = this.saveState.timeOfDay === 'night'
       this.saveState.timeOfDay = wasNight ? 'day' : 'night'
-      if (wasNight) this.saveState.day += 1
+      if (wasNight) {
+        this.saveState.day += 1
+        this.advanceProtectionYears()
+        this.runContestIfDue()
+      }
       this.applyTimeOfDayVisuals()
       this.emitState()
       this.persist()
@@ -691,6 +1097,155 @@ export class MainScene extends Phaser.Scene {
         eventBus.emit('info', '保護区に静かな夜が来ました')
       }
     }
+  }
+
+  private runContestIfDue() {
+    if (this.saveState.day < this.saveState.contest.nextContestDay) return
+    const contest = this.saveState.contest
+    const title = CONTEST_TITLES[contest.held % CONTEST_TITLES.length]
+    const popularity = this.dinosaurs.reduce((sum, dinosaur) => sum + dinosaur.popularity, 0)
+    const regularGrowth = this.saveState.visitorCatalog
+      .filter((entry) => entry.kind === 'regular')
+      .reduce((sum, entry) => sum + entry.level, 0)
+    const score = Math.floor(this.saveState.reputation / 4) + popularity + regularGrowth + this.saveState.facilities.length
+    const rank = score >= 18 ? 1 : score >= 9 ? 2 : 3
+    const moneyReward = rank === 1 ? 5000 : rank === 2 ? 3000 : 1500
+    const reputationReward = rank === 1 ? 6 : rank === 2 ? 4 : 2
+
+    contest.held += 1
+    if (rank === 1) contest.wins += 1
+    contest.lastTitle = title
+    contest.lastRank = rank
+    do contest.nextContestDay += CONTEST_INTERVAL_DAYS
+    while (contest.nextContestDay <= this.saveState.day)
+
+    this.saveState.money += moneyReward
+    let rareAwarded = false
+    if (score >= CONTEST_RARE_UNLOCK_SCORE && !this.saveState.unlockedSpecies.includes('starhorn')) {
+      this.saveState.unlockedSpecies.push('starhorn')
+      this.saveState.rareEggs += 1
+      rareAwarded = true
+    } else if (rank === 1 && contest.wins % 3 === 0) {
+      this.saveState.rareEggs += 1
+      rareAwarded = true
+    }
+
+    soundManager.playCelebration()
+    this.addReputation(reputationReward)
+    this.showContestBanner(title, rank, moneyReward, rareAwarded)
+    this.ensureEgg()
+    this.emitState()
+    this.persist()
+    const rareMessage = rareAwarded ? ' ホシツノのレア卵を獲得！' : ''
+    eventBus.emit('info', `${title}で${rank}位！ 評判と活動資金を獲得しました。${rareMessage}`)
+  }
+
+  private showContestBanner(title: string, rank: number, moneyReward: number, rareAwarded: boolean) {
+    const subtitle = `${rank}位  +¥${moneyReward.toLocaleString()}${rareAwarded ? '  レア卵獲得！' : ''}`
+    const panel = this.add.container(GAME_WIDTH / 2, 178).setDepth(40).setScale(0.6).setAlpha(0)
+    const bg = this.add.graphics()
+    bg.fillStyle(0xfff8d6, 0.98)
+    bg.lineStyle(3, rank === 1 ? 0xf0b429 : 0x8bc34a, 1)
+    bg.fillRoundedRect(-112, -33, 224, 66, 8)
+    bg.strokeRoundedRect(-112, -33, 224, 66, 8)
+    const heading = this.add
+      .text(0, -12, `🏆 ${title}`, { fontSize: '16px', color: '#6d4423', fontStyle: 'bold' })
+      .setOrigin(0.5)
+    const result = this.add
+      .text(0, 13, subtitle, { fontSize: '12px', color: '#2f6b38', fontStyle: 'bold' })
+      .setOrigin(0.5)
+    panel.add([bg, heading, result])
+    this.tweens.add({ targets: panel, scale: 1, alpha: 1, duration: 320, ease: 'Back.easeOut' })
+    this.tweens.add({
+      targets: panel,
+      y: panel.y - 15,
+      alpha: 0,
+      duration: 750,
+      delay: 2600,
+      onComplete: () => panel.destroy(),
+    })
+  }
+
+  private advanceProtectionYears() {
+    this.dinosaurs.forEach((dinosaur) => {
+      dinosaur.protectionYears += 1
+    })
+    const graduate = [...this.dinosaurs]
+      .filter((dinosaur) => dinosaur.protectionYears >= protectionYearsForSpecies(dinosaur.speciesId))
+      .sort((a, b) => a.generation - b.generation)[0]
+    if (graduate && this.dinosaurs.length > 1) this.graduateDinosaur(graduate)
+  }
+
+  private graduateDinosaur(dinosaur: Dinosaur) {
+    this.saveState.legends.push({
+      id: dinosaur.id,
+      name: dinosaur.name_,
+      speciesId: dinosaur.speciesId,
+      generation: dinosaur.generation,
+      popularity: dinosaur.popularity,
+      graduatedDay: this.saveState.day,
+    })
+    this.dinosaurs = this.dinosaurs.filter((active) => active !== dinosaur)
+    soundManager.playCelebration()
+
+    const x = dinosaur.logicalX
+    const y = dinosaur.logicalY
+    const banner = this.add
+      .text(GAME_WIDTH / 2, 205, `祝！ ${dinosaur.name_} 卒業`, {
+        fontSize: '17px',
+        color: '#6d4423',
+        fontStyle: 'bold',
+        backgroundColor: '#fff8d6ee',
+        padding: { x: 12, y: 7 },
+      })
+      .setOrigin(0.5)
+      .setDepth(30)
+      .setScale(0.5)
+      .setAlpha(0)
+    this.tweens.add({ targets: banner, scale: 1, alpha: 1, duration: 300, ease: 'Back.easeOut' })
+    this.tweens.add({
+      targets: banner,
+      y: banner.y - 12,
+      alpha: 0,
+      duration: 700,
+      delay: 2100,
+      onComplete: () => banner.destroy(),
+    })
+    for (let i = 0; i < 12; i++) {
+      const colors = ['#ffd54f', '#81c784', '#64b5f6', '#f48fb1']
+      const confetti = this.add
+        .text(x, y - 18, i % 3 === 0 ? '★' : '●', { fontSize: '10px', color: colors[i % colors.length] })
+        .setOrigin(0.5)
+        .setDepth(29)
+      const angle = (Math.PI * 2 * i) / 12
+      this.tweens.add({
+        targets: confetti,
+        x: x + Math.cos(angle) * Phaser.Math.Between(35, 60),
+        y: y - 25 + Math.sin(angle) * Phaser.Math.Between(25, 45),
+        alpha: 0,
+        angle: Phaser.Math.Between(-180, 180),
+        duration: 1100,
+        onComplete: () => confetti.destroy(),
+      })
+    }
+    this.tweens.add({
+      targets: dinosaur,
+      y: y - 24,
+      alpha: 0,
+      scale: 1.2,
+      duration: 1200,
+      delay: 500,
+      ease: 'Cubic.easeIn',
+      onComplete: () => dinosaur.destroy(),
+    })
+
+    this.ensureEgg()
+    this.emitState()
+    this.persist()
+    eventBus.emit(
+      'info',
+      `${formatGeneration(dinosaur.generation)}の${dinosaur.name_}が古代楽園へ元気に旅立ちました！`,
+    )
   }
 
   private updateWeatherCycle(delta: number) {
@@ -717,8 +1272,15 @@ export class MainScene extends Phaser.Scene {
     let min = Infinity
     for (const facility of this.facilitySprites) {
       if (facility.data.type !== 'feeder') continue
-      const d = Phaser.Math.Distance.Between(this.dino.x, this.dino.y, facility.sprite.x, facility.sprite.y)
-      if (d < min) min = d
+      for (const dinosaur of this.dinosaurs) {
+        const distance = Phaser.Math.Distance.Between(
+          dinosaur.logicalX,
+          dinosaur.logicalY,
+          facility.sprite.x,
+          facility.sprite.y,
+        )
+        if (distance < min) min = distance
+      }
     }
     return min
   }
@@ -728,19 +1290,22 @@ export class MainScene extends Phaser.Scene {
     if (this.idleInfoTimer < 6000) return
     this.idleInfoTimer = 0
 
-    if (this.dino.state === 'sleeping') {
-      eventBus.emit('info', 'モコがすやすや眠っています')
+    const featuredDinosaur = Phaser.Utils.Array.GetRandom(this.dinosaurs)
+    if (!featuredDinosaur) return
+
+    if (featuredDinosaur.state === 'sleeping') {
+      eventBus.emit('info', `${featuredDinosaur.name_}がすやすや眠っています`)
       return
     }
 
-    if (this.dino.state === 'happy') {
-      eventBus.emit('info', Phaser.Utils.Array.GetRandom(['モコが嬉しそうです', 'モコは気持ちよさそうです']))
+    if (featuredDinosaur.state === 'happy') {
+      eventBus.emit('info', `${featuredDinosaur.name_}が嬉しそうです`)
       return
     }
 
     const isRain = this.saveState.weather === 'rainy'
-    const pool = ['モコがぽてぽて歩いています', '小さな保護区に平和な時間が流れています']
-    if (this.nearestFeederDistanceFromDino() < 60) pool.push('モコが餌場に近づいています')
+    const pool = [`${featuredDinosaur.name_}がぽてぽて歩いています`, '小さな保護区に平和な時間が流れています']
+    if (this.nearestFeederDistanceFromDino() < 60) pool.push('ミニリーフたちが餌場に近づいています')
     if (this.visitors.length > 0) pool.push('来園者が少しずつ増えてきました')
     if (this.saveState.reputation >= 5) pool.push('小さな保護区が少しずつ賑わってきました')
     if (isRain) pool.push('雨の匂いがします', '雨が草木を潤しています')
@@ -757,14 +1322,19 @@ export class MainScene extends Phaser.Scene {
       weather: this.saveState.weather,
       soundOn: this.saveState.soundOn,
       gameSpeed: this.saveState.gameSpeed,
+      dinosaurs: this.dinosaurs.map((dinosaur) => dinosaur.toSaveData()),
+      legends: this.saveState.legends,
+      eggRemainingMs: this.saveState.egg?.remainingMs ?? null,
+      visitorCatalog: this.saveState.visitorCatalog,
+      contest: this.saveState.contest,
+      unlockedSpecies: this.saveState.unlockedSpecies,
+      rareEggs: this.saveState.rareEggs,
     })
   }
 
   private persist() {
-    SaveManager.save({
-      ...this.saveState,
-      dinosaur: { x: this.dino.x, y: this.dino.y },
-    })
+    this.saveState.dinosaurs = this.dinosaurs.map((dinosaur) => dinosaur.toSaveData())
+    SaveManager.save(this.saveState)
   }
 
   // ---------- settings ----------
@@ -801,8 +1371,13 @@ export class MainScene extends Phaser.Scene {
     this.facilitySprites = []
     this.createFacilitiesFromState()
 
-    this.dino.destroy()
-    this.createDino()
+    this.dinosaurs.forEach((dinosaur) => dinosaur.destroy())
+    this.dinosaurs = []
+    this.destroyEggVisual()
+    this.hatching = false
+    this.lastEggSecond = -1
+    this.createDinosaursFromState()
+    this.ensureEgg()
 
     this.buildType = null
     this.drawBuildHighlight()
@@ -828,9 +1403,13 @@ export class MainScene extends Phaser.Scene {
     this.updateVisitorSpawning(scaledDelta)
     this.updateIdleInfo(scaledDelta)
 
-    this.dino.update(scaledDelta, {
-      timeOfDay: this.saveState.timeOfDay,
-      feederPositions: this.feederWorldPositions(),
+    this.updateEgg(scaledDelta)
+    const feederPositions = this.feederWorldPositions()
+    this.dinosaurs.forEach((dinosaur) => {
+      dinosaur.update(scaledDelta, {
+        timeOfDay: this.saveState.timeOfDay,
+        feederPositions,
+      })
     })
     this.visitors.forEach((v) => v.update(scaledDelta))
 

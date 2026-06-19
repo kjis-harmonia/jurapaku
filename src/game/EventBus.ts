@@ -1,4 +1,11 @@
 import Phaser from 'phaser'
+import type {
+  ContestSaveData,
+  DinosaurSaveData,
+  LegendData,
+  SpeciesId,
+  VisitorCatalogEntry,
+} from './types'
 
 // Shared event channel between the Phaser game (which owns simulation state)
 // and the React UI (which only renders/dispatches user intent). Avoids prop
@@ -15,9 +22,21 @@ export interface UiStatePayload {
   weather: 'sunny' | 'rainy'
   soundOn: boolean
   gameSpeed: 1 | 2 | 3
+  dinosaurs: DinosaurSaveData[]
+  legends: LegendData[]
+  eggRemainingMs: number | null
+  visitorCatalog: VisitorCatalogEntry[]
+  contest: ContestSaveData
+  unlockedSpecies: SpeciesId[]
+  rareEggs: number
 }
 
 export interface BuildResultPayload {
   success: boolean
   message: string
+}
+
+export interface ReputationGainPayload {
+  amount: number
+  total: number
 }

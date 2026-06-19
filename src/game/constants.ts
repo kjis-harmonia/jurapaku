@@ -1,4 +1,4 @@
-import type { FacilityDef, GameSaveState } from './types'
+import type { FacilityDef, GameSaveState, SpeciesId } from './types'
 
 export const GAME_WIDTH = 320
 export const GAME_HEIGHT = 480
@@ -26,7 +26,16 @@ export const FACILITIES: Record<string, FacilityDef> = {
   feeder: { type: 'feeder', displayName: '木の餌場', cost: 5000 },
   shop: { type: 'shop', displayName: 'モコの葉っぱクッキー屋', cost: 8000 },
   toilet: { type: 'toilet', displayName: '休憩トイレ', cost: 6000 },
+  hatchery: { type: 'hatchery', displayName: 'いのちの芽吹き舎', cost: 25_000 },
 }
+
+export const EGG_HATCH_DURATION_MS = 30_000
+export const MINI_LEAF_PROTECTION_YEARS = 6
+export const STARHORN_PROTECTION_YEARS = 10
+export const MINI_LEAF_NAMES = ['コモ', 'リーフィ', 'ハル', 'ポポ', 'ミント', 'コハク'] as const
+export const STARHORN_NAMES = ['ステラ', 'ルーチェ', 'キララ', 'スピカ'] as const
+export const CONTEST_INTERVAL_DAYS = 3
+export const CONTEST_RARE_UNLOCK_SCORE = 8
 
 export const DAY_DURATION_MS = 60_000
 export const NIGHT_DURATION_MS = 30_000
@@ -38,8 +47,9 @@ export const NIGHT_INTERVAL_MULTIPLIER = 2.5
 export const RAIN_INTERVAL_MULTIPLIER = 1.6
 
 export const VISITOR_MONEY_RANGE = [10, 50] as const
-export const VISITOR_MAX_CONCURRENT = 8
-export const REPUTATION_VISITOR_CAP = 100
+export const VISITOR_MAX_CONCURRENT = 6
+export const REPUTATION_VISITOR_CAP = 80
+export const REPUTATION_MAX_VISITOR_BOOST = 0.25
 
 export const AUTOSAVE_INTERVAL_MS = 3000
 
@@ -62,11 +72,44 @@ export function createDefaultSaveState(): GameSaveState {
     timeOfDay: 'day',
     weather: 'sunny',
     facilities: defaultFacilities(),
-    dinosaur: {
-      x: PEN_X + PEN_WIDTH / 2,
-      y: PEN_Y + PEN_HEIGHT / 2,
+    dinosaurs: [
+      {
+        id: 'dino-moko-1',
+        name: 'モコ',
+        speciesId: 'mini-leaf',
+        generation: 1,
+        protectionYears: 0,
+        popularity: 0,
+        x: PEN_X + PEN_WIDTH / 2,
+        y: PEN_Y + PEN_HEIGHT / 2,
+      },
+    ],
+    egg: null,
+    legends: [],
+    nextGeneration: 2,
+    visitorCatalog: [],
+    contest: {
+      nextContestDay: 3,
+      held: 0,
+      wins: 0,
+      lastTitle: null,
+      lastRank: null,
     },
+    unlockedSpecies: ['mini-leaf'],
+    rareEggs: 0,
     soundOn: true,
     gameSpeed: 1,
   }
+}
+
+export function formatGeneration(generation: number): string {
+  return generation === 1 ? '初代' : `${generation}代目`
+}
+
+export function protectionYearsForSpecies(speciesId: SpeciesId): number {
+  return speciesId === 'starhorn' ? STARHORN_PROTECTION_YEARS : MINI_LEAF_PROTECTION_YEARS
+}
+
+export function speciesDisplayName(speciesId: SpeciesId): string {
+  return speciesId === 'starhorn' ? 'ホシツノ幼体' : 'ミニリーフ'
 }
