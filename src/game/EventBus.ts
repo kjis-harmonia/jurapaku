@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import type {
   ContestSaveData,
   DinosaurSaveData,
+  FacilityData,
   LegendData,
   SpeciesId,
   VisitorCatalogEntry,
@@ -29,6 +30,8 @@ export interface UiStatePayload {
   contest: ContestSaveData
   unlockedSpecies: SpeciesId[]
   rareEggs: number
+  triceratopsEggs: number
+  facilities: FacilityData[]
 }
 
 export interface BuildResultPayload {

@@ -14,6 +14,10 @@ export interface DinosaurUpdateContext {
   feederPositions: Phaser.Math.Vector2[]
 }
 
+export interface DinosaurCallbacks {
+  onStomp?: (dinosaur: Dinosaur) => void
+}
+
 const WALK_SPEED = 22 // px/sec
 const FEEDER_HAPPY_RADIUS = 36
 const SLEEP_CHANCE_PER_SEC_NIGHT = 0.12
@@ -23,6 +27,14 @@ const HAPPY_DURATION_MS = 2200
 const SLEEP_MIN_DURATION_MS = 4000
 const BOB_AMPLITUDE = 2.4
 const BOB_SPEED = 9 // radians/sec while walking
+const TRICERATOPS_STOMP_CHANCE_PER_SEC = 0.025
+const STOMP_DURATION_MS = 1200
+
+function textureForSpecies(speciesId: SpeciesId): string {
+  if (speciesId === 'triceratops') return 'tex_dino_triceratops'
+  if (speciesId === 'starhorn') return 'tex_dino_starhorn'
+  return 'tex_dino'
+}
 
 /**
  * Placeholder body is a generated texture; swap `tex_dino` for a real
@@ -46,9 +58,10 @@ export class Dinosaur extends Phaser.GameObjects.Sprite {
   private baseY: number
   private bobPhase = 0
   private zzzTimer = 0
+  private callbacks: DinosaurCallbacks
 
-  constructor(scene: Phaser.Scene, data: DinosaurSaveData, bounds: PenBounds) {
-    super(scene, data.x, data.y, data.speciesId === 'starhorn' ? 'tex_dino_starhorn' : 'tex_dino')
+  constructor(scene: Phaser.Scene, data: DinosaurSaveData, bounds: PenBounds, callbacks: DinosaurCallbacks = {}) {
+    super(scene, data.x, data.y, textureForSpecies(data.speciesId))
     this.id = data.id
     this.name_ = data.name
     this.speciesId = data.speciesId
@@ -58,6 +71,7 @@ export class Dinosaur extends Phaser.GameObjects.Sprite {
     this.bounds = bounds
     this.baseX = data.x
     this.baseY = data.y
+    this.callbacks = callbacks
     scene.add.existing(this)
     this.setOrigin(0.5, 0.78)
   }
@@ -177,6 +191,38 @@ export class Dinosaur extends Phaser.GameObjects.Sprite {
     })
   }
 
+  private enterStomp() {
+    this.state = 'stomping'
+    this.walkTarget = null
+    this.forcedStateTimer = STOMP_DURATION_MS
+    soundManager.playStomp()
+    this.callbacks.onStomp?.(this)
+    this.scene.cameras.main.shake(180, 0.004)
+    for (let i = 0; i < 7; i++) {
+      const dust = this.scene.add
+        .circle(this.baseX + Phaser.Math.Between(-18, 18), this.baseY + 4, Phaser.Math.Between(2, 4), 0xc8b58b, 0.75)
+        .setDepth(4)
+      this.scene.tweens.add({
+        targets: dust,
+        x: dust.x + Phaser.Math.Between(-16, 16),
+        y: dust.y - Phaser.Math.Between(8, 18),
+        alpha: 0,
+        scale: 1.8,
+        duration: 650,
+        onComplete: () => dust.destroy(),
+      })
+    }
+    this.scene.tweens.add({
+      targets: this,
+      y: this.baseY + 4,
+      scaleX: 1.06,
+      scaleY: 0.92,
+      duration: 130,
+      yoyo: true,
+      repeat: 2,
+    })
+  }
+
   private wake() {
     this.state = 'walking'
     this.clearTint()
@@ -200,7 +246,7 @@ export class Dinosaur extends Phaser.GameObjects.Sprite {
       return
     }
 
-    if (this.state === 'happy') {
+    if (this.state === 'happy' || this.state === 'stomping') {
       this.forcedStateTimer -= deltaMs
       if (this.forcedStateTimer <= 0) {
         this.state = 'walking'
@@ -217,8 +263,14 @@ export class Dinosaur extends Phaser.GameObjects.Sprite {
     }
 
     const distToFeeder = this.nearestFeederDistance(ctx.feederPositions)
-    if (distToFeeder < FEEDER_HAPPY_RADIUS && Math.random() < HAPPY_CHANCE_PER_SEC_NEAR_FEEDER * dt) {
+    const happyRadius = this.speciesId === 'triceratops' ? 54 : FEEDER_HAPPY_RADIUS
+    if (distToFeeder < happyRadius && Math.random() < HAPPY_CHANCE_PER_SEC_NEAR_FEEDER * dt) {
       this.enterHappy()
+      return
+    }
+
+    if (this.speciesId === 'triceratops' && Math.random() < TRICERATOPS_STOMP_CHANCE_PER_SEC * dt) {
+      this.enterStomp()
       return
     }
 
@@ -238,13 +290,15 @@ export class Dinosaur extends Phaser.GameObjects.Sprite {
       return
     }
 
-    const step = WALK_SPEED * dt
+    const walkSpeed = this.speciesId === 'triceratops' ? 12 : WALK_SPEED
+    const step = walkSpeed * dt
     this.baseX += (dx / dist) * step
     this.baseY += (dy / dist) * step
 
     this.bobPhase += BOB_SPEED * dt
     this.x = this.baseX
-    this.y = this.baseY - Math.abs(Math.sin(this.bobPhase)) * BOB_AMPLITUDE
+    const bobAmplitude = this.speciesId === 'triceratops' ? 1.2 : BOB_AMPLITUDE
+    this.y = this.baseY - Math.abs(Math.sin(this.bobPhase)) * bobAmplitude
 
     if (Math.abs(dx) > 1) {
       this.setFlipX(dx < 0)

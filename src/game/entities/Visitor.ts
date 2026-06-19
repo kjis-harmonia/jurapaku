@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import type { VisitorCatalogKind, VisitorType, Weather } from '../types'
+import type { SpeciesId, VisitorCatalogKind, VisitorType, Weather } from '../types'
 import { VISITOR_MONEY_RANGE } from '../constants'
 
 export type VisitorPhase =
@@ -19,6 +19,10 @@ const IDLE_BOB_SPEED = 4
 
 export interface VisitorContext {
   dinosaurName: string
+  dinosaurId: string
+  dinosaurSpeciesId: SpeciesId
+  isDinosaurFan: boolean
+  promenadeY: number
   visitorDisplayName: string | null
   specialKind: VisitorCatalogKind | null
   specialBubble: string | null
@@ -108,7 +112,7 @@ export class Visitor extends Phaser.GameObjects.Sprite {
   }
 
   private beginFacilityTrip(phase: 'going-to-shop' | 'going-to-toilet', target: Phaser.Math.Vector2) {
-    const promenadeY = this.viewpoint.y
+    const promenadeY = this.context.promenadeY
     this.phase = phase
     this.route = [
       new Phaser.Math.Vector2(this.baseX, promenadeY),
@@ -118,7 +122,7 @@ export class Visitor extends Phaser.GameObjects.Sprite {
   }
 
   private beginLeaving() {
-    const promenadeY = this.viewpoint.y
+    const promenadeY = this.context.promenadeY
     this.phase = 'leaving'
     this.route = [
       new Phaser.Math.Vector2(this.baseX, promenadeY),
@@ -219,6 +223,11 @@ export class Visitor extends Phaser.GameObjects.Sprite {
     if (this.type === 'boy') gain += 5
     if (this.context.feederNearby) gain += this.type === 'girl' ? 10 : 5
     if (this.context.toiletPosition) gain += this.type === 'office' ? 5 : 3
+    if (this.context.dinosaurSpeciesId === 'triceratops') {
+      gain += 20
+      if (this.type === 'boy') gain += 10
+      if (this.context.isDinosaurFan) gain += 12
+    }
 
     this.satisfaction = gain
     this.showSatisfactionPopup(gain)
@@ -232,7 +241,8 @@ export class Visitor extends Phaser.GameObjects.Sprite {
     const admission = Math.round(Phaser.Math.Between(VISITOR_MONEY_RANGE[0], VISITOR_MONEY_RANGE[1]) / 10) * 10
     this.callbacks.onMoneyEarned(admission, this.baseX, this.baseY)
 
-    const shopChance = Math.min(0.85, 0.2 + this.satisfaction / 100 + (this.type === 'girl' ? 0.12 : 0))
+    const maxShopChance = this.context.dinosaurSpeciesId === 'triceratops' ? 0.95 : 0.85
+    const shopChance = Math.min(maxShopChance, 0.2 + this.satisfaction / 100 + (this.type === 'girl' ? 0.12 : 0))
     this.wantsShop = this.context.shopPosition !== null && Math.random() < shopChance
     this.wantsToilet = this.context.toiletPosition !== null && (this.type === 'office' || Math.random() < 0.35)
     this.advanceAfterStop()
@@ -252,11 +262,21 @@ export class Visitor extends Phaser.GameObjects.Sprite {
   }
 
   private completePurchase() {
-    const satisfactionRatio = Phaser.Math.Clamp(this.satisfaction / 45, 0, 1)
-    const amount = Math.round((100 + satisfactionRatio * 200) / 10) * 10
+    const satisfactionRatio = Phaser.Math.Clamp(this.satisfaction / 60, 0, 1)
+    const maxPurchase = this.context.dinosaurSpeciesId === 'triceratops' ? 400 : 300
+    const amount = Math.round((100 + satisfactionRatio * (maxPurchase - 100)) / 10) * 10
     this.satisfaction += 3
     this.showSatisfactionPopup(3)
     this.callbacks.onPurchase(amount, this.baseX, this.baseY)
+  }
+
+  reactToStomp(dinosaurId: string): boolean {
+    if (this.context.dinosaurId !== dinosaurId || this.phase !== 'watching') return false
+    const gain = this.context.isDinosaurFan ? 14 : this.type === 'boy' ? 11 : 7
+    this.satisfaction += gain
+    this.showSatisfactionPopup(gain, '大迫力！')
+    this.callbacks.onInfo(`${this.context.visitorDisplayName ?? '来園者'}が踏み鳴らしに大興奮しています`)
+    return true
   }
 
   update(deltaMs: number) {

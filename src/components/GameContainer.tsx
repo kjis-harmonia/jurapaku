@@ -39,6 +39,8 @@ export function GameContainer() {
   const [contest, setContest] = useState<ContestSaveData>(defaults.contest)
   const [unlockedSpecies, setUnlockedSpecies] = useState<SpeciesId[]>(defaults.unlockedSpecies)
   const [rareEggs, setRareEggs] = useState(defaults.rareEggs)
+  const [triceratopsEggs, setTriceratopsEggs] = useState(defaults.triceratopsEggs)
+  const [facilities, setFacilities] = useState(defaults.facilities)
 
   useEffect(() => {
     const onState = (payload: UiStatePayload) => {
@@ -56,6 +58,8 @@ export function GameContainer() {
       setContest(payload.contest)
       setUnlockedSpecies(payload.unlockedSpecies)
       setRareEggs(payload.rareEggs)
+      setTriceratopsEggs(payload.triceratopsEggs)
+      setFacilities(payload.facilities)
     }
     const onInfo = (message: string) => setInfo(message)
     const onBuildResult = (result: BuildResultPayload) => {
@@ -133,6 +137,8 @@ export function GameContainer() {
         contest={contest}
         unlockedSpecies={unlockedSpecies}
         rareEggs={rareEggs}
+        triceratopsEggs={triceratopsEggs}
+        facilities={facilities}
         day={day}
         timeOfDay={timeOfDay}
         weather={weather}

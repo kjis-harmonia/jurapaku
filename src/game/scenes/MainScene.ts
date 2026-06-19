@@ -30,6 +30,16 @@ import {
   STARHORN_NAMES,
   CONTEST_INTERVAL_DAYS,
   CONTEST_RARE_UNLOCK_SCORE,
+  TRICERA_PEN_COLS,
+  TRICERA_PEN_ROWS,
+  TRICERA_PEN_X,
+  TRICERA_PEN_Y,
+  TRICERA_PEN_WIDTH,
+  TRICERA_PEN_HEIGHT,
+  TRICERATOPS_NAMES,
+  TRICERATOPS_UNLOCK_REPUTATION,
+  TRICERATOPS_UNLOCK_CONTEST_WINS,
+  TRICERATOPS_FEED_COST_PER_YEAR,
   formatGeneration,
   protectionYearsForSpecies,
   speciesDisplayName,
@@ -138,6 +148,31 @@ export class MainScene extends Phaser.Scene {
     g.fillStyle(0x263238, 1)
     g.fillCircle(39, 9, 1.4)
     g.generateTexture('tex_dino_starhorn', 49, 32)
+    g.clear()
+
+    // Triceratops: substantially larger silhouette, broad frill and three horns.
+    g.fillStyle(0x5b5038, 1)
+    g.fillEllipse(31, 36, 46, 10)
+    g.fillStyle(0x8fa85c, 1)
+    g.fillRoundedRect(14, 29, 9, 13, 3)
+    g.fillRoundedRect(39, 29, 9, 13, 3)
+    g.fillStyle(0xa9c66a, 1)
+    g.fillEllipse(30, 25, 52, 27)
+    g.fillStyle(0x78944e, 1)
+    g.fillCircle(56, 20, 18)
+    g.fillTriangle(45, 8, 53, 5, 48, -2)
+    g.fillTriangle(57, 4, 64, 7, 63, -4)
+    g.fillStyle(0xe8dfbd, 1)
+    g.fillTriangle(59, 17, 76, 12, 61, 22)
+    g.fillTriangle(53, 12, 63, 4, 57, 17)
+    g.fillTriangle(52, 23, 64, 27, 54, 27)
+    g.fillStyle(0xffffff, 1)
+    g.fillCircle(60, 17, 3.5)
+    g.fillStyle(0x263238, 1)
+    g.fillCircle(61, 17, 1.7)
+    g.fillStyle(0x6d7f47, 1)
+    g.fillTriangle(5, 24, 0, 18, 13, 22)
+    g.generateTexture('tex_dino_triceratops', 78, 45)
     g.clear()
 
     // visitors share a body silhouette; accessories tell them apart
@@ -278,6 +313,41 @@ export class MainScene extends Phaser.Scene {
     g.generateTexture('tex_hatchery', 40, 40)
     g.clear()
 
+    // Reinforced 4x4 enclosure, built as one fixed large facility.
+    g.fillStyle(0x6f9f4b, 0.88)
+    g.fillRoundedRect(4, 4, 152, 152, 7)
+    g.lineStyle(7, 0x455a64, 1)
+    g.strokeRoundedRect(3, 3, 154, 154, 7)
+    g.lineStyle(2, 0xb0bec5, 1)
+    g.strokeRoundedRect(8, 8, 144, 144, 5)
+    g.fillStyle(0x37474f, 1)
+    for (let x = 4; x <= 156; x += 38) {
+      g.fillRoundedRect(x - 3, 0, 7, 14, 2)
+      g.fillRoundedRect(x - 3, 146, 7, 14, 2)
+    }
+    for (let y = 4; y <= 156; y += 38) {
+      g.fillRoundedRect(0, y - 3, 14, 7, 2)
+      g.fillRoundedRect(146, y - 3, 14, 7, 2)
+    }
+    g.generateTexture('tex_reinforced-pen', 160, 160)
+    g.clear()
+
+    // Wide stone trough packed with grass for a large herbivore.
+    g.fillStyle(0x000000, 0.12)
+    g.fillEllipse(28, 29, 52, 7)
+    g.fillStyle(0x546e7a, 1)
+    g.fillRoundedRect(1, 12, 54, 17, 4)
+    g.fillStyle(0x90a4ae, 1)
+    g.fillRoundedRect(5, 14, 46, 9, 3)
+    g.fillStyle(0x4caf50, 1)
+    g.fillEllipse(13, 12, 18, 10)
+    g.fillEllipse(28, 9, 22, 12)
+    g.fillEllipse(44, 12, 18, 10)
+    g.fillStyle(0x81c784, 1)
+    g.fillEllipse(28, 8, 12, 8)
+    g.generateTexture('tex_large-feeder', 56, 32)
+    g.clear()
+
     g.fillStyle(0x000000, 0.1)
     g.fillEllipse(10, 19, 17, 4)
     g.fillStyle(0xfff3cd, 1)
@@ -299,6 +369,18 @@ export class MainScene extends Phaser.Scene {
     g.fillCircle(12, 10, 2.5)
     g.fillCircle(7, 14, 1.5)
     g.generateTexture('tex_rare_egg', 20, 21)
+    g.clear()
+
+    g.fillStyle(0x000000, 0.1)
+    g.fillEllipse(10, 19, 17, 4)
+    g.fillStyle(0xc8d9a0, 1)
+    g.fillEllipse(10, 10, 15, 19)
+    g.fillStyle(0xf1f4df, 0.8)
+    g.fillEllipse(7, 6, 4, 7)
+    g.fillStyle(0x6f7f49, 1)
+    g.fillTriangle(11, 8, 15, 11, 10, 12)
+    g.fillCircle(7, 14, 1.5)
+    g.generateTexture('tex_triceratops_egg', 20, 21)
     g.clear()
 
     // raindrop
@@ -325,7 +407,9 @@ export class MainScene extends Phaser.Scene {
     this.drawStaticScenery()
     this.createFacilitiesFromState()
     this.createDinosaursFromState()
+    const triceratopsUnlocked = this.checkTriceratopsUnlock(false)
     this.ensureEgg()
+    if (triceratopsUnlocked) this.persist()
     this.createOverlays()
 
     this.buildHighlight = this.add.graphics().setDepth(50)
@@ -469,11 +553,12 @@ export class MainScene extends Phaser.Scene {
   }
 
   private createDinosaur(data: DinosaurSaveData): Dinosaur {
-    const dinosaur = new Dinosaur(this, data, {
-      x: PEN_X,
-      y: PEN_Y,
-      width: PEN_WIDTH,
-      height: PEN_HEIGHT,
+    const isTriceratops = data.speciesId === 'triceratops'
+    const bounds = isTriceratops
+      ? { x: TRICERA_PEN_X, y: TRICERA_PEN_Y, width: TRICERA_PEN_WIDTH, height: TRICERA_PEN_HEIGHT }
+      : { x: PEN_X, y: PEN_Y, width: PEN_WIDTH, height: PEN_HEIGHT }
+    const dinosaur = new Dinosaur(this, data, bounds, {
+      onStomp: (stompingDinosaur) => this.handleTriceratopsStomp(stompingDinosaur),
     })
     dinosaur.setDepth(5)
     if (data.generation > 1 && data.speciesId === 'mini-leaf') dinosaur.setTint(0xe8ffd9)
@@ -496,6 +581,18 @@ export class MainScene extends Phaser.Scene {
   }
 
   private facilityWorldPosition(facility: FacilityData): Phaser.Math.Vector2 {
+    if (facility.type === 'reinforced-pen') {
+      return new Phaser.Math.Vector2(
+        TRICERA_PEN_X + TRICERA_PEN_WIDTH / 2,
+        TRICERA_PEN_Y + TRICERA_PEN_HEIGHT / 2,
+      )
+    }
+    if (facility.type === 'large-feeder') {
+      return new Phaser.Math.Vector2(
+        TRICERA_PEN_X + facility.gridX * TILE_SIZE + TILE_SIZE / 2,
+        TRICERA_PEN_Y + facility.gridY * TILE_SIZE + TILE_SIZE / 2,
+      )
+    }
     if (facility.type === 'feeder' || facility.type === 'hatchery') {
       return new Phaser.Math.Vector2(
         PEN_X + facility.gridX * TILE_SIZE + TILE_SIZE / 2,
@@ -510,7 +607,8 @@ export class MainScene extends Phaser.Scene {
 
   private addFacilitySprite(facility: FacilityData): Phaser.GameObjects.Sprite {
     const position = this.facilityWorldPosition(facility)
-    const sprite = this.add.sprite(position.x, position.y, `tex_${facility.type}`).setDepth(4)
+    const depth = facility.type === 'reinforced-pen' ? 1 : 4
+    const sprite = this.add.sprite(position.x, position.y, `tex_${facility.type}`).setDepth(depth)
     this.facilitySprites.push({ data: facility, sprite })
     return sprite
   }
@@ -519,6 +617,16 @@ export class MainScene extends Phaser.Scene {
     return this.facilitySprites
       .filter((facility) => facility.data.type === 'feeder')
       .map((facility) => new Phaser.Math.Vector2(facility.sprite.x, facility.sprite.y))
+  }
+
+  private largeFeederWorldPositions(): Phaser.Math.Vector2[] {
+    return this.facilitySprites
+      .filter((facility) => facility.data.type === 'large-feeder')
+      .map((facility) => new Phaser.Math.Vector2(facility.sprite.x, facility.sprite.y))
+  }
+
+  private hasFacility(type: FacilityType): boolean {
+    return this.saveState.facilities.some((facility) => facility.type === type)
   }
 
   private hatcheryPosition(): Phaser.Math.Vector2 | null {
@@ -537,7 +645,9 @@ export class MainScene extends Phaser.Scene {
     this.destroyEggVisual()
     const position = this.hatcheryPosition()
     if (!this.saveState.egg || !position) return
-    const texture = this.saveState.egg.rarity === 'rare' ? 'tex_rare_egg' : 'tex_egg'
+    const texture = this.saveState.egg.speciesId === 'triceratops'
+      ? 'tex_triceratops_egg'
+      : this.saveState.egg.rarity === 'rare' ? 'tex_rare_egg' : 'tex_egg'
     this.eggSprite = this.add.sprite(position.x, position.y + 3, texture).setDepth(8)
     this.eggLabel = this.add
       .text(position.x, position.y - 22, '', {
@@ -559,23 +669,39 @@ export class MainScene extends Phaser.Scene {
   }
 
   private ensureEgg() {
-    if (this.saveState.egg || this.hatching || this.dinosaurs.length >= 2 || !this.hatcheryPosition()) {
+    if (this.saveState.egg || this.hatching || !this.hatcheryPosition()) {
       if (this.saveState.egg && !this.eggSprite) this.createEggVisual()
       return
     }
-    const useRareEgg = this.saveState.rareEggs > 0 && this.saveState.unlockedSpecies.includes('starhorn')
-    if (useRareEgg) this.saveState.rareEggs -= 1
+    const smallDinosaurCount = this.dinosaurs.filter((dinosaur) => dinosaur.speciesId !== 'triceratops').length
+    const hasTriceratops = this.dinosaurs.some((dinosaur) => dinosaur.speciesId === 'triceratops')
+    const useTriceratopsEgg =
+      this.saveState.triceratopsEggs > 0 &&
+      this.saveState.unlockedSpecies.includes('triceratops') &&
+      this.hasFacility('reinforced-pen') &&
+      this.hasFacility('large-feeder') &&
+      !hasTriceratops
+    if (!useTriceratopsEgg && smallDinosaurCount >= 2) return
+
+    const useRareEgg = !useTriceratopsEgg && this.saveState.rareEggs > 0 && this.saveState.unlockedSpecies.includes('starhorn')
+    if (useTriceratopsEgg) this.saveState.triceratopsEggs -= 1
+    else if (useRareEgg) this.saveState.rareEggs -= 1
+    const speciesId = useTriceratopsEgg ? 'triceratops' : useRareEgg ? 'starhorn' : 'mini-leaf'
     this.saveState.egg = {
       id: `egg-${Date.now()}`,
-      speciesId: useRareEgg ? 'starhorn' : 'mini-leaf',
-      rarity: useRareEgg ? 'rare' : 'normal',
+      speciesId,
+      rarity: useTriceratopsEgg || useRareEgg ? 'rare' : 'normal',
       generation: this.saveState.nextGeneration,
       remainingMs: EGG_HATCH_DURATION_MS,
     }
     this.createEggVisual()
     this.persist()
     this.emitState()
-    const eggName = useRareEgg ? 'レアなホシツノの卵' : `${formatGeneration(this.saveState.nextGeneration)}ミニリーフの卵`
+    const eggName = useTriceratopsEgg
+      ? '大きなトリケラの卵'
+      : useRareEgg
+        ? 'レアなホシツノの卵'
+        : `${formatGeneration(this.saveState.nextGeneration)}ミニリーフの卵`
     eventBus.emit('info', `${eggName}を迎えました`)
   }
 
@@ -644,7 +770,9 @@ export class MainScene extends Phaser.Scene {
       this.hatching = false
       return
     }
-    const namePool = egg.speciesId === 'starhorn' ? STARHORN_NAMES : MINI_LEAF_NAMES
+    const namePool = egg.speciesId === 'triceratops'
+      ? TRICERATOPS_NAMES
+      : egg.speciesId === 'starhorn' ? STARHORN_NAMES : MINI_LEAF_NAMES
     const name = namePool[(egg.generation - 2) % namePool.length]
     const data: DinosaurSaveData = {
       id: `dino-${egg.generation}-${Date.now()}`,
@@ -653,8 +781,12 @@ export class MainScene extends Phaser.Scene {
       generation: egg.generation,
       protectionYears: 0,
       popularity: 0,
-      x: Phaser.Math.Between(PEN_X + 30, PEN_X + PEN_WIDTH - 30),
-      y: Phaser.Math.Between(PEN_Y + 30, PEN_Y + PEN_HEIGHT - 30),
+      x: egg.speciesId === 'triceratops'
+        ? Phaser.Math.Between(TRICERA_PEN_X + 38, TRICERA_PEN_X + TRICERA_PEN_WIDTH - 38)
+        : Phaser.Math.Between(PEN_X + 30, PEN_X + PEN_WIDTH - 30),
+      y: egg.speciesId === 'triceratops'
+        ? Phaser.Math.Between(TRICERA_PEN_Y + 38, TRICERA_PEN_Y + TRICERA_PEN_HEIGHT - 38)
+        : Phaser.Math.Between(PEN_Y + 30, PEN_Y + PEN_HEIGHT - 30),
     }
     this.saveState.egg = null
     this.lastEggSecond = -1
@@ -684,6 +816,28 @@ export class MainScene extends Phaser.Scene {
   private drawBuildHighlight() {
     this.buildHighlight.clear()
     if (!this.buildType) return
+    if (this.buildType === 'reinforced-pen') {
+      const occupied = this.hasFacility('reinforced-pen')
+      this.buildHighlight.fillStyle(occupied ? 0xef5350 : 0xffee58, 0.35)
+      this.buildHighlight.fillRect(TRICERA_PEN_X + 3, TRICERA_PEN_Y + 3, TRICERA_PEN_WIDTH - 6, TRICERA_PEN_HEIGHT - 6)
+      return
+    }
+
+    if (this.buildType === 'large-feeder') {
+      for (let gx = 0; gx < TRICERA_PEN_COLS; gx++) {
+        for (let gy = 0; gy < TRICERA_PEN_ROWS; gy++) {
+          const occupied = this.saveState.facilities.some(
+            (facility) => facility.type === 'large-feeder' && facility.gridX === gx && facility.gridY === gy,
+          )
+          const x = TRICERA_PEN_X + gx * TILE_SIZE
+          const y = TRICERA_PEN_Y + gy * TILE_SIZE
+          this.buildHighlight.fillStyle(occupied ? 0xef5350 : 0xffee58, 0.35)
+          this.buildHighlight.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4)
+        }
+      }
+      return
+    }
+
     const isPenFacility = this.buildType === 'feeder' || this.buildType === 'hatchery'
     if (isPenFacility) {
       for (let gx = 0; gx < PEN_COLS; gx++) {
@@ -722,27 +876,63 @@ export class MainScene extends Phaser.Scene {
     soundManager.unlock()
     if (!this.buildType) return
 
+    const isReinforcedPen = this.buildType === 'reinforced-pen'
+    const isLargeFeeder = this.buildType === 'large-feeder'
     const isPenFacility = this.buildType === 'feeder' || this.buildType === 'hatchery'
-    const gridX = Math.floor((pointer.worldX - (isPenFacility ? PEN_X : 0)) / TILE_SIZE)
-    const gridY = Math.floor((pointer.worldY - (isPenFacility ? PEN_Y : 0)) / TILE_SIZE)
-    const inBounds = isPenFacility
-      ? gridX >= 0 && gridX < PEN_COLS && gridY >= 0 && gridY < PEN_ROWS
-      : AMENITY_GRID_SLOTS.some((slot) => slot.gridX === gridX && slot.gridY === gridY)
+    const originX = isPenFacility ? PEN_X : isLargeFeeder ? TRICERA_PEN_X : 0
+    const originY = isPenFacility ? PEN_Y : isLargeFeeder ? TRICERA_PEN_Y : 0
+    const gridX = isReinforcedPen ? 0 : Math.floor((pointer.worldX - originX) / TILE_SIZE)
+    const gridY = isReinforcedPen ? 0 : Math.floor((pointer.worldY - originY) / TILE_SIZE)
+    const inReinforcedBounds =
+      pointer.worldX >= TRICERA_PEN_X && pointer.worldX < TRICERA_PEN_X + TRICERA_PEN_WIDTH &&
+      pointer.worldY >= TRICERA_PEN_Y && pointer.worldY < TRICERA_PEN_Y + TRICERA_PEN_HEIGHT
+    const inBounds = isReinforcedPen
+      ? inReinforcedBounds
+      : isLargeFeeder
+        ? gridX >= 0 && gridX < TRICERA_PEN_COLS && gridY >= 0 && gridY < TRICERA_PEN_ROWS
+        : isPenFacility
+          ? gridX >= 0 && gridX < PEN_COLS && gridY >= 0 && gridY < PEN_ROWS
+          : AMENITY_GRID_SLOTS.some((slot) => slot.gridX === gridX && slot.gridY === gridY)
     if (!inBounds) {
-      const message = isPenFacility ? '柵の中をタップしてください' : '黄色い柵外グリッドをタップしてください'
+      const message = isReinforcedPen || isLargeFeeder
+        ? '強化区画の黄色い場所をタップしてください'
+        : isPenFacility
+          ? '柵の中をタップしてください'
+          : '黄色い柵外グリッドをタップしてください'
       eventBus.emit('build-result', { success: false, message })
       return
     }
 
     const occupied = this.saveState.facilities.some((facility) =>
-      isPenFacility
+      isReinforcedPen
+        ? facility.type === 'reinforced-pen'
+        : isLargeFeeder
+          ? facility.type === 'large-feeder' && facility.gridX === gridX && facility.gridY === gridY
+          : isPenFacility
         ? (facility.type === 'feeder' || facility.type === 'hatchery') &&
           facility.gridX === gridX && facility.gridY === gridY
         : facility.type !== 'feeder' && facility.type !== 'hatchery' &&
+          facility.type !== 'reinforced-pen' && facility.type !== 'large-feeder' &&
           facility.gridX === gridX && facility.gridY === gridY,
     )
     if (occupied) {
       eventBus.emit('build-result', { success: false, message: 'すでに何か置かれています' })
+      return
+    }
+
+    if (
+      (this.buildType === 'reinforced-pen' || this.buildType === 'large-feeder') &&
+      !this.saveState.unlockedSpecies.includes('triceratops')
+    ) {
+      eventBus.emit('build-result', { success: false, message: 'トリケラ解放後に建築できます' })
+      return
+    }
+    if (this.buildType === 'large-feeder' && !this.hasFacility('reinforced-pen')) {
+      eventBus.emit('build-result', { success: false, message: '先にトリケラ強化柵を建築してください' })
+      return
+    }
+    if (this.buildType === 'large-feeder' && this.hasFacility('large-feeder')) {
+      eventBus.emit('build-result', { success: false, message: '大型草餌場は1基だけ設置できます' })
       return
     }
 
@@ -770,7 +960,7 @@ export class MainScene extends Phaser.Scene {
     this.emitState()
     this.persist()
     eventBus.emit('build-result', { success: true, message: `${facilityDef.displayName}を設置しました` })
-    if (type === 'hatchery') this.ensureEgg()
+    if (type === 'hatchery' || type === 'reinforced-pen' || type === 'large-feeder') this.ensureEgg()
   }
 
   /** "ぽふん": a quick scale-punch plus a soft puff ring and a scatter of dust specks. */
@@ -916,15 +1106,35 @@ export class MainScene extends Phaser.Scene {
     return new Phaser.Math.Vector2(chosen.sprite.x, chosen.sprite.y + 20)
   }
 
-  private addReputation(amount: number, x?: number, y?: number) {
-    if (amount <= 0) return
+  private checkTriceratopsUnlock(announce = true): boolean {
+    if (this.saveState.unlockedSpecies.includes('triceratops')) return false
+    const meetsRequirement =
+      this.saveState.reputation >= TRICERATOPS_UNLOCK_REPUTATION ||
+      this.saveState.contest.wins >= TRICERATOPS_UNLOCK_CONTEST_WINS
+    if (!meetsRequirement) return false
+    this.saveState.unlockedSpecies.push('triceratops')
+    this.saveState.triceratopsEggs += 1
+    if (announce) {
+      soundManager.playCelebration()
+      eventBus.emit('info', 'トリケラが解放され、大きな卵を受け取りました！')
+    }
+    return true
+  }
+
+  private addReputation(amount: number, x?: number, y?: number): boolean {
+    if (amount <= 0) return false
     this.saveState.reputation += amount
+    const triceratopsUnlocked = this.checkTriceratopsUnlock()
     soundManager.playReputation()
     if (x !== undefined && y !== undefined) this.showReputationPopup(x, y, amount)
     this.emitState()
     this.persist()
     eventBus.emit('reputation-gained', { amount, total: this.saveState.reputation })
-    eventBus.emit('info', '保護区の評判が少し上がりました')
+    eventBus.emit(
+      'info',
+      triceratopsUnlocked ? 'トリケラが解放され、大きな卵を受け取りました！' : '保護区の評判が少し上がりました',
+    )
+    return triceratopsUnlocked
   }
 
   private spawnVisitor() {
@@ -932,14 +1142,17 @@ export class MainScene extends Phaser.Scene {
     const specialVisitor = this.pickSpecialVisitor()
     const type = specialVisitor?.visitorType ?? this.pickVisitorType()
     const watchedDinosaur = Phaser.Utils.Array.GetRandom(this.dinosaurs)
+    const watchingTriceratops = watchedDinosaur.speciesId === 'triceratops'
     const fromLeft = Math.random() < 0.5
     const exitLeft = Math.random() < 0.5
 
-    const spawn = new Phaser.Math.Vector2(fromLeft ? -20 : GAME_WIDTH + 20, ENTRY_Y)
-    const viewpoint = new Phaser.Math.Vector2(
-      Phaser.Math.Between(PEN_X + 10, PEN_X + PEN_WIDTH - 10),
-      ENTRY_Y,
-    )
+    const triceratopsViewY = TRICERA_PEN_Y + TRICERA_PEN_HEIGHT + 18
+    const spawn = watchingTriceratops
+      ? new Phaser.Math.Vector2(GAME_WIDTH + 20, triceratopsViewY)
+      : new Phaser.Math.Vector2(fromLeft ? -20 : GAME_WIDTH + 20, ENTRY_Y)
+    const viewpoint = watchingTriceratops
+      ? new Phaser.Math.Vector2(Phaser.Math.Between(260, 300), triceratopsViewY)
+      : new Phaser.Math.Vector2(Phaser.Math.Between(PEN_X + 10, PEN_X + PEN_WIDTH - 10), ENTRY_Y)
     const exit = new Phaser.Math.Vector2(exitLeft ? -20 : GAME_WIDTH + 20, ENTRY_Y)
 
     const toiletPosition = this.randomFacilityPosition('toilet')
@@ -951,10 +1164,16 @@ export class MainScene extends Phaser.Scene {
       type,
       {
         dinosaurName: watchedDinosaur.name_,
+        dinosaurId: watchedDinosaur.id,
+        dinosaurSpeciesId: watchedDinosaur.speciesId,
+        isDinosaurFan: specialVisitor?.id === 'regular-boy',
+        promenadeY: ENTRY_Y,
         visitorDisplayName: specialVisitor?.displayName ?? null,
         specialKind: specialVisitor?.kind ?? null,
         specialBubble: specialVisitor?.bubble ?? null,
-        feederNearby: this.facilitySprites.some((facility) => facility.data.type === 'feeder'),
+        feederNearby: watchingTriceratops
+          ? this.hasFacility('large-feeder')
+          : this.hasFacility('feeder'),
         crowdPenalty: this.visitors.length >= 3 && !toiletPosition ? 5 : 0,
         shopPosition: this.randomFacilityPosition('shop'),
         toiletPosition,
@@ -964,7 +1183,7 @@ export class MainScene extends Phaser.Scene {
         onMoneyEarned: (amount, x, y) => {
           this.saveState.money += amount
           const activeDinosaur = this.dinosaurs.find((dinosaur) => dinosaur.id === watchedDinosaur.id)
-          if (activeDinosaur) activeDinosaur.popularity += 1
+          if (activeDinosaur) activeDinosaur.popularity += watchingTriceratops ? 2 : 1
           soundManager.playCoin()
           this.showMoneyPopup(x, y, amount)
           this.emitState()
@@ -994,6 +1213,20 @@ export class MainScene extends Phaser.Scene {
     )
     visitor.setDepth(6)
     this.visitors.push(visitor)
+  }
+
+  private handleTriceratopsStomp(dinosaur: Dinosaur) {
+    let reactions = 0
+    this.visitors.forEach((visitor) => {
+      if (visitor.reactToStomp(dinosaur.id)) reactions += 1
+    })
+    if (reactions > 0) {
+      dinosaur.popularity += reactions
+      this.emitState()
+      this.persist()
+    } else {
+      eventBus.emit('info', `${dinosaur.name_}が力強く地面を踏み鳴らしました`)
+    }
   }
 
   private showMoneyPopup(x: number, y: number, amount: number) {
@@ -1131,13 +1364,14 @@ export class MainScene extends Phaser.Scene {
     }
 
     soundManager.playCelebration()
-    this.addReputation(reputationReward)
+    const triceratopsUnlocked = this.addReputation(reputationReward)
     this.showContestBanner(title, rank, moneyReward, rareAwarded)
     this.ensureEgg()
     this.emitState()
     this.persist()
     const rareMessage = rareAwarded ? ' ホシツノのレア卵を獲得！' : ''
-    eventBus.emit('info', `${title}で${rank}位！ 評判と活動資金を獲得しました。${rareMessage}`)
+    const triceratopsMessage = triceratopsUnlocked ? ' トリケラも解放！' : ''
+    eventBus.emit('info', `${title}で${rank}位！ 評判と活動資金を獲得しました。${rareMessage}${triceratopsMessage}`)
   }
 
   private showContestBanner(title: string, rank: number, moneyReward: number, rareAwarded: boolean) {
@@ -1170,6 +1404,12 @@ export class MainScene extends Phaser.Scene {
     this.dinosaurs.forEach((dinosaur) => {
       dinosaur.protectionYears += 1
     })
+    const triceratopsCount = this.dinosaurs.filter((dinosaur) => dinosaur.speciesId === 'triceratops').length
+    if (triceratopsCount > 0) {
+      const feedCost = triceratopsCount * TRICERATOPS_FEED_COST_PER_YEAR
+      this.saveState.money = Math.max(0, this.saveState.money - feedCost)
+      eventBus.emit('info', `大型餌場の草を補充しました（-¥${feedCost.toLocaleString()}）`)
+    }
     const graduate = [...this.dinosaurs]
       .filter((dinosaur) => dinosaur.protectionYears >= protectionYearsForSpecies(dinosaur.speciesId))
       .sort((a, b) => a.generation - b.generation)[0]
@@ -1186,6 +1426,7 @@ export class MainScene extends Phaser.Scene {
       graduatedDay: this.saveState.day,
     })
     this.dinosaurs = this.dinosaurs.filter((active) => active !== dinosaur)
+    if (dinosaur.speciesId === 'triceratops') this.saveState.triceratopsEggs += 1
     soundManager.playCelebration()
 
     const x = dinosaur.logicalX
@@ -1329,6 +1570,8 @@ export class MainScene extends Phaser.Scene {
       contest: this.saveState.contest,
       unlockedSpecies: this.saveState.unlockedSpecies,
       rareEggs: this.saveState.rareEggs,
+      triceratopsEggs: this.saveState.triceratopsEggs,
+      facilities: this.saveState.facilities,
     })
   }
 
@@ -1405,10 +1648,11 @@ export class MainScene extends Phaser.Scene {
 
     this.updateEgg(scaledDelta)
     const feederPositions = this.feederWorldPositions()
+    const largeFeederPositions = this.largeFeederWorldPositions()
     this.dinosaurs.forEach((dinosaur) => {
       dinosaur.update(scaledDelta, {
         timeOfDay: this.saveState.timeOfDay,
-        feederPositions,
+        feederPositions: dinosaur.speciesId === 'triceratops' ? largeFeederPositions : feederPositions,
       })
     })
     this.visitors.forEach((v) => v.update(scaledDelta))

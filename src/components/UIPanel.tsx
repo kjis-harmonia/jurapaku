@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type {
   ContestSaveData,
   DinosaurSaveData,
+  FacilityData,
   FacilityType,
   GameSpeed,
   LegendData,
@@ -10,7 +11,13 @@ import type {
   VisitorCatalogEntry,
   Weather,
 } from '../game/types'
-import { formatGeneration, protectionYearsForSpecies, speciesDisplayName } from '../game/constants'
+import {
+  TRICERATOPS_UNLOCK_CONTEST_WINS,
+  TRICERATOPS_UNLOCK_REPUTATION,
+  formatGeneration,
+  protectionYearsForSpecies,
+  speciesDisplayName,
+} from '../game/constants'
 import { BuildMenu } from './BuildMenu'
 
 interface UIPanelProps {
@@ -24,6 +31,8 @@ interface UIPanelProps {
   contest: ContestSaveData
   unlockedSpecies: SpeciesId[]
   rareEggs: number
+  triceratopsEggs: number
+  facilities: FacilityData[]
   day: number
   timeOfDay: TimeOfDay
   weather: Weather
@@ -58,6 +67,8 @@ export function UIPanel({
   contest,
   unlockedSpecies,
   rareEggs,
+  triceratopsEggs,
+  facilities,
   day,
   timeOfDay,
   weather,
@@ -134,6 +145,7 @@ export function UIPanel({
           {dinosaurs.map((dinosaur) => (
             <span key={dinosaur.id} className="ui-dinosaur-entry">
               <strong>{dinosaur.name}</strong>
+              <span>{speciesDisplayName(dinosaur.speciesId)}</span>
               <span>{formatGeneration(dinosaur.generation)}</span>
               <span>{dinosaur.protectionYears}/{protectionYearsForSpecies(dinosaur.speciesId)}年</span>
               <span>人気 {dinosaur.popularity}</span>
@@ -163,6 +175,14 @@ export function UIPanel({
         {unlockedSpecies.includes('starhorn') && (
           <span className="ui-rare-unlock">✦ {speciesDisplayName('starhorn')}解放 {rareEggs > 0 ? `・卵${rareEggs}個` : ''}</span>
         )}
+        {unlockedSpecies.includes('triceratops') ? (
+          <span className="ui-triceratops-unlock">▲ トリケラ解放 {triceratopsEggs > 0 ? `・卵${triceratopsEggs}個` : ''}</span>
+        ) : (
+          <span className="ui-triceratops-progress">
+            ▲ トリケラ 評判{Math.min(reputation, TRICERATOPS_UNLOCK_REPUTATION)}/{TRICERATOPS_UNLOCK_REPUTATION}
+            ・大会{Math.min(contest.wins, TRICERATOPS_UNLOCK_CONTEST_WINS)}/{TRICERATOPS_UNLOCK_CONTEST_WINS}勝
+          </span>
+        )}
         <button type="button" className="ui-catalog-button" onClick={() => setCatalogOpen(true)}>
           📖 来園者図鑑 {visitorCatalog.length}/8
         </button>
@@ -189,7 +209,13 @@ export function UIPanel({
       </div>
 
       {buildMenuOpen && (
-        <BuildMenu money={money} onSelect={onSelectFacility} onClose={onCloseBuildMenu} />
+        <BuildMenu
+          money={money}
+          builtFacilityTypes={facilities.map((facility) => facility.type)}
+          unlockedSpecies={unlockedSpecies}
+          onSelect={onSelectFacility}
+          onClose={onCloseBuildMenu}
+        />
       )}
 
       {catalogOpen && (

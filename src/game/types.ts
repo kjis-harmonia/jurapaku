@@ -3,11 +3,11 @@
 
 export type TimeOfDay = 'day' | 'night'
 export type Weather = 'sunny' | 'rainy'
-export type DinoState = 'walking' | 'sleeping' | 'happy'
+export type DinoState = 'walking' | 'sleeping' | 'happy' | 'stomping'
 export type VisitorType = 'boy' | 'girl' | 'office'
-export type FacilityType = 'feeder' | 'shop' | 'toilet' | 'hatchery'
+export type FacilityType = 'feeder' | 'shop' | 'toilet' | 'hatchery' | 'reinforced-pen' | 'large-feeder'
 export type GameSpeed = 1 | 2 | 3
-export type SpeciesId = 'mini-leaf' | 'starhorn'
+export type SpeciesId = 'mini-leaf' | 'starhorn' | 'triceratops'
 export type VisitorCatalogKind = 'regular' | 'rare'
 
 export interface SpeciesDef {
@@ -88,6 +88,7 @@ export interface GameSaveState {
   contest: ContestSaveData
   unlockedSpecies: SpeciesId[]
   rareEggs: number
+  triceratopsEggs: number
   soundOn: boolean
   gameSpeed: GameSpeed
 }

@@ -11,8 +11,15 @@ import type {
   VisitorCatalogEntry,
 } from './types'
 
-const FACILITY_TYPES = new Set<FacilityType>(['feeder', 'shop', 'toilet', 'hatchery'])
-const SPECIES = new Set<SpeciesId>(['mini-leaf', 'starhorn'])
+const FACILITY_TYPES = new Set<FacilityType>([
+  'feeder',
+  'shop',
+  'toilet',
+  'hatchery',
+  'reinforced-pen',
+  'large-feeder',
+])
+const SPECIES = new Set<SpeciesId>(['mini-leaf', 'starhorn', 'triceratops'])
 
 function validFacilities(value: unknown, fallback: FacilityData[]): FacilityData[] {
   if (!Array.isArray(value)) return fallback
@@ -161,6 +168,9 @@ export const SaveManager = {
         contest: validContest(parsed.contest, fallback.contest),
         unlockedSpecies: validUnlockedSpecies(parsed.unlockedSpecies),
         rareEggs: Number.isFinite(parsed.rareEggs) ? Math.max(0, Math.floor(Number(parsed.rareEggs))) : 0,
+        triceratopsEggs: Number.isFinite(parsed.triceratopsEggs)
+          ? Math.max(0, Math.floor(Number(parsed.triceratopsEggs)))
+          : 0,
         soundOn: typeof parsed.soundOn === 'boolean' ? parsed.soundOn : fallback.soundOn,
         gameSpeed: parsed.gameSpeed === 2 || parsed.gameSpeed === 3 ? parsed.gameSpeed : 1,
       }

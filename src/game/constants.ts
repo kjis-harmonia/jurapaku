@@ -12,6 +12,13 @@ export const PEN_Y = 250
 export const PEN_WIDTH = PEN_COLS * TILE_SIZE
 export const PEN_HEIGHT = PEN_ROWS * TILE_SIZE
 
+export const TRICERA_PEN_COLS = 4
+export const TRICERA_PEN_ROWS = 4
+export const TRICERA_PEN_X = 150
+export const TRICERA_PEN_Y = 45
+export const TRICERA_PEN_WIDTH = TRICERA_PEN_COLS * TILE_SIZE
+export const TRICERA_PEN_HEIGHT = TRICERA_PEN_ROWS * TILE_SIZE
+
 export const HUT_X = 30
 export const HUT_Y = 40
 export const HUT_WIDTH = 70
@@ -27,15 +34,22 @@ export const FACILITIES: Record<string, FacilityDef> = {
   shop: { type: 'shop', displayName: 'モコの葉っぱクッキー屋', cost: 8000 },
   toilet: { type: 'toilet', displayName: '休憩トイレ', cost: 6000 },
   hatchery: { type: 'hatchery', displayName: 'いのちの芽吹き舎', cost: 25_000 },
+  'reinforced-pen': { type: 'reinforced-pen', displayName: 'トリケラ強化柵', cost: 40_000 },
+  'large-feeder': { type: 'large-feeder', displayName: '大型草餌場', cost: 12_000 },
 }
 
 export const EGG_HATCH_DURATION_MS = 30_000
 export const MINI_LEAF_PROTECTION_YEARS = 6
 export const STARHORN_PROTECTION_YEARS = 10
+export const TRICERATOPS_PROTECTION_YEARS = 12
 export const MINI_LEAF_NAMES = ['コモ', 'リーフィ', 'ハル', 'ポポ', 'ミント', 'コハク'] as const
 export const STARHORN_NAMES = ['ステラ', 'ルーチェ', 'キララ', 'スピカ'] as const
+export const TRICERATOPS_NAMES = ['ツノマル', 'トリノ', 'ガク', 'ミドリノ'] as const
 export const CONTEST_INTERVAL_DAYS = 3
 export const CONTEST_RARE_UNLOCK_SCORE = 8
+export const TRICERATOPS_UNLOCK_REPUTATION = 40
+export const TRICERATOPS_UNLOCK_CONTEST_WINS = 2
+export const TRICERATOPS_FEED_COST_PER_YEAR = 500
 
 export const DAY_DURATION_MS = 60_000
 export const NIGHT_DURATION_MS = 30_000
@@ -97,6 +111,7 @@ export function createDefaultSaveState(): GameSaveState {
     },
     unlockedSpecies: ['mini-leaf'],
     rareEggs: 0,
+    triceratopsEggs: 0,
     soundOn: true,
     gameSpeed: 1,
   }
@@ -107,9 +122,11 @@ export function formatGeneration(generation: number): string {
 }
 
 export function protectionYearsForSpecies(speciesId: SpeciesId): number {
+  if (speciesId === 'triceratops') return TRICERATOPS_PROTECTION_YEARS
   return speciesId === 'starhorn' ? STARHORN_PROTECTION_YEARS : MINI_LEAF_PROTECTION_YEARS
 }
 
 export function speciesDisplayName(speciesId: SpeciesId): string {
+  if (speciesId === 'triceratops') return 'トリケラ'
   return speciesId === 'starhorn' ? 'ホシツノ幼体' : 'ミニリーフ'
 }

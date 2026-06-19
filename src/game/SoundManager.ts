@@ -98,6 +98,12 @@ class SoundManager {
     }
   }
 
+  playStomp() {
+    if (!this.enabled) return
+    this.tone(95, 48, 0.28, 'sine', 0.2)
+    this.tone(150, 70, 0.18, 'triangle', 0.12, 0.04)
+  }
+
   /** Short neutral blip for menu/button taps. */
   playUiTap() {
     if (!this.enabled) return

@@ -210,6 +210,16 @@
   font-weight: 700;
 }
 
+.ui-triceratops-unlock,
+.ui-triceratops-progress {
+  color: #536b2f;
+  font-weight: 800;
+}
+
+.ui-triceratops-progress {
+  color: #6d5d45;
+}
+
 .ui-rare-unlock {
   color: #6a4ca0;
 }
